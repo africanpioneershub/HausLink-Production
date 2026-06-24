@@ -1,13 +1,11 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function NotFound() {
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
       <div className="flex flex-col items-center mb-8">
-        <span className="text-3xl font-bold text-brand-teal tracking-tight">HausLink</span>
-        <span className="mt-1 text-xs font-semibold tracking-widest text-gray-500">
-          CONNECT. RENT. MANAGE. ALL-IN-ONE.
-        </span>
+        <Image src="/logo.png" alt="HausLink" width={180} height={52} className="object-contain mx-auto" />
       </div>
 
       <h1 className="text-2xl font-bold text-gray-900 mb-2">404 — Page Not Found</h1>

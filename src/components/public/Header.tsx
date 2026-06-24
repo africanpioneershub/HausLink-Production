@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 
 const NAV_LINKS = [
@@ -19,12 +20,15 @@ export function Header() {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
-        <Link href="/" className="flex flex-col leading-tight">
-          <span className="text-xl font-bold text-brand-teal tracking-tight">HausLink</span>
-          <span className="text-xs font-semibold tracking-widest text-gray-500">
-            CONNECT. RENT. MANAGE. ALL-IN-ONE.
-          </span>
-          <span className="text-xs text-gray-400">Powered by AfriPrime Holdings Group Ltd</span>
+        <Link href="/">
+          <Image
+            src="/logo.png"
+            alt="HausLink"
+            width={140}
+            height={40}
+            priority
+            className="object-contain"
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

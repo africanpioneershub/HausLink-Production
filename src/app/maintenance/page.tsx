@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function MaintenancePage() {
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
-      <span className="text-3xl font-bold text-brand-teal tracking-tight mb-6">HausLink</span>
+      <div className="mb-6">
+        <Image src="/logo.png" alt="HausLink" width={180} height={52} className="object-contain mx-auto" />
+      </div>
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-3">We&apos;ll be right back</h1>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
@@ -46,10 +47,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12">
       <div className="flex flex-col items-center mb-8">
-        <span className="text-3xl font-bold text-brand-teal tracking-tight">HausLink</span>
-        <span className="mt-1 text-xs font-semibold tracking-widest text-gray-500">
-          CONNECT. RENT. MANAGE. ALL-IN-ONE.
-        </span>
+        <Image src="/logo.png" alt="HausLink" width={180} height={52} className="object-contain mx-auto" />
       </div>
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8">

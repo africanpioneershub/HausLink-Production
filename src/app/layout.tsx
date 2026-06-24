@@ -4,6 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'HausLink — Find & Manage Rental Properties in Rwanda',
   description: 'Rwanda\'s all-in-one property management platform for tenants and landlords.',
+  icons: { icon: '/logo.png' },
 };
 
 export default function RootLayout({
