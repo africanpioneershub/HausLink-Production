@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         role,
         status: 'PENDING',
         kyc_status: 'NOT_SUBMITTED',
-        city,
+        city: city ?? null,
         district,
       },
     });

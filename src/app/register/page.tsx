@@ -26,6 +26,7 @@ interface FormState {
   whatsappCountry: Country;
   whatsapp: string;
   district: string;
+  city: string;
   documentType: DocumentType;
   file: File | null;
   propertyNote: string;
@@ -43,6 +44,7 @@ const INITIAL_STATE: FormState = {
   whatsappCountry: DEFAULT_COUNTRY,
   whatsapp: '',
   district: '',
+  city: '',
   documentType: 'NATIONAL_ID',
   file: null,
   propertyNote: '',
@@ -159,6 +161,7 @@ function RegisterForm() {
           phone: form.phone,
           whatsapp,
           district: form.district,
+          city: form.city,
           countryCode: form.phoneCountry.dial,
           whatsappCountryCode: whatsappCountry.dial,
         }),
@@ -533,6 +536,23 @@ function StepTwo({
             </option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1.5">
+          City / Sector
+        </label>
+        <input
+          id="city"
+          type="text"
+          value={form.city}
+          onChange={(e) => update('city', e.target.value)}
+          placeholder="e.g. Kimihurura, Remera, Nyarutarama"
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Enter your neighborhood or sector (optional)
+        </p>
       </div>
     </div>
   );
