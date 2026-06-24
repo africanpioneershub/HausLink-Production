@@ -10,6 +10,26 @@ type ModalStatus = 'idle' | 'submitting' | 'instructions' | 'completed' | 'faile
 const POLL_INTERVAL_MS = 5000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
+const METHOD_CONFIG: Record<
+  PaymentMethod,
+  { label: string; accent: string; badgeDot: string; selected: string; instructionsMessage: string }
+> = {
+  MTN_MOMO: {
+    label: 'MTN MoMo',
+    accent: 'text-yellow-600',
+    badgeDot: 'bg-yellow-500',
+    selected: 'bg-yellow-500 text-white border-yellow-500',
+    instructionsMessage: 'Payment request sent to your MTN MoMo number',
+  },
+  AIRTEL_MONEY: {
+    label: 'Airtel Money',
+    accent: 'text-red-600',
+    badgeDot: 'bg-red-600',
+    selected: 'bg-red-600 text-white border-red-600',
+    instructionsMessage: 'Payment request sent to your Airtel Money number',
+  },
+};
+
 interface PayRentButtonProps {
   tenancyId: string;
   propertyTitle: string;
@@ -148,21 +168,25 @@ export function PayRentButton({ tenancyId, propertyTitle, amount, initialPhone }
             {status === 'idle' || status === 'submitting' || status === 'error' ? (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="flex gap-2">
-                  {(['MTN_MOMO', 'AIRTEL_MONEY'] as PaymentMethod[]).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMethod(m)}
-                      className={cn(
-                        'flex-1 text-sm font-semibold py-2.5 rounded-lg border transition-colors',
-                        method === m
-                          ? 'bg-brand-teal text-white border-brand-teal'
-                          : 'border-gray-200 text-gray-700 hover:border-brand-teal hover:text-brand-teal'
-                      )}
-                    >
-                      {m === 'MTN_MOMO' ? 'MTN MoMo' : 'Airtel Money'}
-                    </button>
-                  ))}
+                  {(['MTN_MOMO', 'AIRTEL_MONEY'] as PaymentMethod[]).map((m) => {
+                    const config = METHOD_CONFIG[m];
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMethod(m)}
+                        className={cn(
+                          'flex-1 flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-lg border transition-colors',
+                          method === m
+                            ? config.selected
+                            : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                        )}
+                      >
+                        <span className={cn('w-2 h-2 rounded-full', config.badgeDot)} />
+                        {config.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div>
@@ -202,8 +226,8 @@ export function PayRentButton({ tenancyId, propertyTitle, amount, initialPhone }
               </form>
             ) : status === 'instructions' ? (
               <div className="space-y-4">
-                <p className="text-sm font-medium text-gray-900">
-                  Payment request sent to your phone
+                <p className={cn('text-sm font-medium', METHOD_CONFIG[method].accent)}>
+                  {METHOD_CONFIG[method].instructionsMessage}
                 </p>
                 <ol className="space-y-2 text-sm text-gray-600 list-decimal list-inside">
                   {steps.map((step) => (

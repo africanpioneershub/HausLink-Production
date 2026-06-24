@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
 import { getMoMoPaymentStatus } from '@/lib/payments/momo';
+import { getAirtelPaymentStatus } from '@/lib/payments/airtel';
 import { completePayment, failPayment } from '@/lib/payments/complete';
 
 export const GET = withAuth(['TENANT', 'LANDLORD', 'ADMIN'])(
@@ -34,6 +35,18 @@ export const GET = withAuth(['TENANT', 'LANDLORD', 'ADMIN'])(
         const updated = await completePayment(payment.id);
         currentStatus = updated?.status ?? 'COMPLETED';
       } else if (momoStatus === 'FAILED') {
+        await failPayment(payment.id);
+        currentStatus = 'FAILED';
+      }
+    }
+
+    if (payment.status === 'PENDING' && payment.method === 'AIRTEL_MONEY' && payment.txn_ref) {
+      const airtelStatus = await getAirtelPaymentStatus(payment.txn_ref);
+
+      if (airtelStatus === 'SUCCESSFUL') {
+        const updated = await completePayment(payment.id);
+        currentStatus = updated?.status ?? 'COMPLETED';
+      } else if (airtelStatus === 'FAILED') {
         await failPayment(payment.id);
         currentStatus = 'FAILED';
       }
