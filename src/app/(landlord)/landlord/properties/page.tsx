@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Building2, CheckCircle2, FileEdit, Home, ImageIcon, LayoutGrid, List } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { ImageUploader } from '@/components/landlord/ImageUploader';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
+
+type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
 interface PropertyItem {
   id: string;
@@ -45,6 +48,9 @@ export default function LandlordPropertiesPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatus>('NOT_SUBMITTED');
+  const [registrationPaid, setRegistrationPaid] = useState(false);
+  const [gateModal, setGateModal] = useState<KycStatus | 'PAYMENT_REQUIRED' | null>(null);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<PropertyType>('APARTMENT');
@@ -67,7 +73,27 @@ export default function LandlordPropertiesPage() {
 
   useEffect(() => {
     loadProperties();
+    fetch('/api/user/profile')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setKycStatus(json.data.kyc_status);
+          setRegistrationPaid(json.data.registration_paid);
+        }
+      });
   }, []);
+
+  function handleAddPropertyClick() {
+    if (kycStatus !== 'APPROVED') {
+      setGateModal(kycStatus);
+      return;
+    }
+    if (!registrationPaid) {
+      setGateModal('PAYMENT_REQUIRED');
+      return;
+    }
+    setShowForm((v) => !v);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,7 +131,7 @@ export default function LandlordPropertiesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">My Properties</h1>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => (showForm ? setShowForm(false) : handleAddPropertyClick())}
           className="bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
         >
           {showForm ? 'Cancel' : 'New Property'}
@@ -298,6 +324,75 @@ export default function LandlordPropertiesPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {gateModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-center">
+            {gateModal === 'NOT_SUBMITTED' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  Verify your identity to list
+                </h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  To list properties you need to upload a valid ID document.
+                </p>
+                <Link
+                  href="/landlord/settings?tab=verification"
+                  className="block w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Upload Documents
+                </Link>
+              </>
+            )}
+            {gateModal === 'PENDING' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  Verification in progress
+                </h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  Your documents are being reviewed. You will be notified when approved.
+                </p>
+              </>
+            )}
+            {gateModal === 'REJECTED' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  Verification was rejected
+                </h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  Please resubmit a valid ID document to continue.
+                </p>
+                <Link
+                  href="/landlord/settings?tab=verification"
+                  className="block w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Upload Documents
+                </Link>
+              </>
+            )}
+            {gateModal === 'PAYMENT_REQUIRED' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">Pay registration fee</h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  Please complete your RWF 10,000 registration fee to start listing.
+                </p>
+                <Link
+                  href="/onboarding/payment-required"
+                  className="block w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Pay Now
+                </Link>
+              </>
+            )}
+            <button
+              onClick={() => setGateModal(null)}
+              className="mt-3 w-full border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>

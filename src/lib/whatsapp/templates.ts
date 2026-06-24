@@ -15,6 +15,41 @@ export async function sendWhatsAppWelcome({
   });
 }
 
+export async function sendWhatsAppAccountApproved({
+  phone,
+  name,
+  role,
+}: {
+  phone: string;
+  name: string;
+  role: 'TENANT' | 'LANDLORD';
+}) {
+  const nextStep =
+    role === 'LANDLORD'
+      ? 'Upload your ID to start listing properties.'
+      : 'Browse and save properties.';
+
+  await sendWhatsAppMessage({
+    to: phone,
+    text: `Your account has been approved! ✅\nYou can now log in to HausLink.\n${nextStep}\nhauslink.rw`,
+  });
+}
+
+export async function sendWhatsAppAccountRejected({
+  phone,
+  name,
+  reason,
+}: {
+  phone: string;
+  name: string;
+  reason: string;
+}) {
+  await sendWhatsAppMessage({
+    to: phone,
+    text: `Hi ${name}, your HausLink account application was not approved ⚠️\nReason: ${reason}\nContact support if you have questions.`,
+  });
+}
+
 export async function sendWhatsAppKYCApproved({
   phone,
   name,

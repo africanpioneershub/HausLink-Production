@@ -12,6 +12,8 @@ interface AdminUserItem {
   role: string;
   status: string;
   kyc_status: string;
+  city: string | null;
+  district: string | null;
   created_at: string;
 }
 
@@ -22,12 +24,13 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'LANDLORDS', label: 'Landlords' },
   { key: 'TENANTS', label: 'Tenants' },
   { key: 'ADMINS', label: 'Admins' },
-  { key: 'PENDING', label: 'Pending' },
+  { key: 'PENDING', label: 'Pending Approval' },
 ];
 
 const STATUS_BADGE: Record<string, string> = {
   ACTIVE: 'bg-green-100 text-green-700',
   PENDING: 'bg-yellow-100 text-yellow-700',
+  REJECTED: 'bg-red-100 text-red-700',
   BANNED: 'bg-red-100 text-red-700',
   SUSPENDED: 'bg-gray-100 text-gray-700',
 };
@@ -97,6 +100,32 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleApproveRegistration(userId: string) {
+    setBusyId(userId);
+    try {
+      await fetch(`/api/admin/users/${userId}/approve-registration`, { method: 'POST' });
+      loadUsers();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRejectRegistration(userId: string) {
+    const reason = window.prompt('Reason for rejecting this registration:');
+    if (reason === null) return;
+    setBusyId(userId);
+    try {
+      await fetch(`/api/admin/users/${userId}/reject-registration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      loadUsers();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
@@ -136,6 +165,37 @@ export default function AdminUsersPage() {
         <p className="text-sm text-gray-500">Loading users…</p>
       ) : users.length === 0 ? (
         <p className="text-sm text-gray-500">No users found.</p>
+      ) : tab === 'PENDING' ? (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-100">
+          {users.map((u) => (
+            <div key={u.id} className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="font-medium text-gray-900">{u.name ?? u.email}</p>
+                <p className="text-sm text-gray-500">{u.email}</p>
+                <p className="text-sm text-gray-500">
+                  {u.role} · {u.district ?? '—'}, {u.city ?? '—'} · Registered{' '}
+                  {formatDate(u.created_at)}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleApproveRegistration(u.id)}
+                  disabled={busyId === u.id}
+                  className="text-sm font-medium text-green-600 hover:text-green-700 disabled:opacity-50"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => handleRejectRegistration(u.id)}
+                  disabled={busyId === u.id}
+                  className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-100">
           {users.map((u) => (
@@ -163,6 +223,7 @@ export default function AdminUsersPage() {
                 >
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="PENDING">PENDING</option>
+                  <option value="REJECTED">REJECTED</option>
                   <option value="SUSPENDED">SUSPENDED</option>
                   <option value="BANNED">BANNED</option>
                 </select>

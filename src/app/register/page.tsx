@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Check, Home, Building2, Upload, FileText, X, Mail } from 'lucide-react';
+import { Eye, EyeOff, Check, Home, Building2, Mail } from 'lucide-react';
 import { CountrySelect } from '@/components/auth/CountrySelect';
 import { DEFAULT_COUNTRY, type Country } from '@/lib/countries';
 import { RWANDA_DISTRICTS } from '@/lib/rwanda-districts';
@@ -12,7 +12,6 @@ import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { UserRole } from '@/types';
 
 type Role = Extract<UserRole, 'TENANT' | 'LANDLORD'>;
-type DocumentType = 'NATIONAL_ID' | 'PASSPORT';
 
 interface FormState {
   name: string;
@@ -27,9 +26,6 @@ interface FormState {
   whatsapp: string;
   district: string;
   city: string;
-  documentType: DocumentType;
-  file: File | null;
-  propertyNote: string;
 }
 
 const INITIAL_STATE: FormState = {
@@ -45,13 +41,7 @@ const INITIAL_STATE: FormState = {
   whatsapp: '',
   district: '',
   city: '',
-  documentType: 'NATIONAL_ID',
-  file: null,
-  propertyNote: '',
 };
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 
 export default function RegisterPage() {
   return (
@@ -64,7 +54,7 @@ export default function RegisterPage() {
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -99,48 +89,27 @@ function RegisterForm() {
       return 'WhatsApp number must contain digits only';
     }
     if (!form.district.trim()) return 'District is required';
-    return null;
-  }
-
-  function validateStep3(): string | null {
-    if (!form.file) return 'Please upload your ID or passport';
+    if (!form.city.trim()) return 'City is required';
     return null;
   }
 
   function goNext() {
-    const err = step === 1 ? validateStep1() : validateStep2();
+    const err = validateStep1();
     if (err) {
       setError(err);
       return;
     }
     setError('');
-    setStep((s) => (s === 1 ? 2 : 3) as 1 | 2 | 3);
+    setStep(2);
   }
 
   function goBack() {
     setError('');
-    setStep((s) => (s === 3 ? 2 : 1) as 1 | 2 | 3);
-  }
-
-  function handleFileChange(file: File | null) {
-    if (!file) {
-      update('file', null);
-      return;
-    }
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      setError('File must be a JPG, PNG, or PDF');
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setError('File must be 5MB or smaller');
-      return;
-    }
-    setError('');
-    update('file', file);
+    setStep(1);
   }
 
   async function handleSubmit() {
-    const err = validateStep3();
+    const err = validateStep2();
     if (err) {
       setError(err);
       return;
@@ -199,18 +168,20 @@ function RegisterForm() {
           <div className="mx-auto w-14 h-14 rounded-full bg-brand-teal/10 flex items-center justify-center mb-4">
             <Mail className="w-7 h-7 text-brand-teal" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Check Your Email!</h1>
-          <p className="text-gray-600 mb-6">
-            We sent a verification link to{' '}
-            <span className="font-medium text-gray-900">{form.email}</span>. Click the link to
-            verify your account, then our team will review your documents{' '}
-            {form.role === 'LANDLORD' ? 'and activate your account ' : ''}within 24-48 hours.
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Account Created Successfully!</h1>
+          <p className="text-gray-600 mb-3">
+            Please check your email{' '}
+            <span className="font-medium text-gray-900">{form.email}</span> and click the
+            verification link to activate your account.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Once verified, our admin team will review and approve your account within 24 hours.
           </p>
           <button
             onClick={() => router.push('/login')}
             className="w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity"
           >
-            Go to Login
+            Back to Login
           </button>
           <button
             type="button"
@@ -239,9 +210,6 @@ function RegisterForm() {
 
         {step === 1 && <StepOne form={form} update={update} />}
         {step === 2 && <StepTwo form={form} update={update} />}
-        {step === 3 && (
-          <StepThree form={form} update={update} onFileChange={handleFileChange} />
-        )}
 
         {error && <p className="mt-4 text-sm text-red-600 text-center">{error}</p>}
 
@@ -255,7 +223,7 @@ function RegisterForm() {
               Back
             </button>
           )}
-          {step < 3 ? (
+          {step < 2 ? (
             <button
               type="button"
               onClick={goNext}
@@ -288,8 +256,8 @@ function RegisterForm() {
   );
 }
 
-function StepDots({ step }: { step: 1 | 2 | 3 }) {
-  const labels = ['Step 1', 'Step 2', 'Step 3'];
+function StepDots({ step }: { step: 1 | 2 }) {
+  const labels = ['Step 1', 'Step 2'];
   return (
     <div className="flex items-center justify-center gap-3 mb-8">
       {labels.map((label, i) => {
@@ -314,7 +282,7 @@ function StepDots({ step }: { step: 1 | 2 | 3 }) {
                 {label}
               </span>
             </div>
-            {n < 3 && <div className={`w-10 h-0.5 ${n < step ? 'bg-brand-teal' : 'bg-gray-200'}`} />}
+            {n < 2 && <div className={`w-10 h-0.5 ${n < step ? 'bg-brand-teal' : 'bg-gray-200'}`} />}
           </div>
         );
       })}
@@ -548,119 +516,11 @@ function StepTwo({
           value={form.city}
           onChange={(e) => update('city', e.target.value)}
           placeholder="e.g. Kimihurura, Remera, Nyarutarama"
+          required
           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
         />
-        <p className="text-xs text-gray-400 mt-1">
-          Enter your neighborhood or sector (optional)
-        </p>
+        <p className="text-xs text-gray-400 mt-1">Enter your neighborhood or sector</p>
       </div>
-    </div>
-  );
-}
-
-function StepThree({
-  form,
-  update,
-  onFileChange,
-}: {
-  form: FormState;
-  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
-  onFileChange: (file: File | null) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const isImage = form.file && form.file.type.startsWith('image/');
-  const previewUrl = isImage && form.file ? URL.createObjectURL(form.file) : null;
-
-  return (
-    <div className="space-y-5">
-      <h1 className="text-xl font-bold text-gray-900">Verification Documents</h1>
-
-      <p className="text-sm text-gray-600 bg-brand-teal/5 border border-brand-teal/20 rounded-lg p-3">
-        {form.role === 'LANDLORD'
-          ? 'As a landlord, you must upload a valid ID for verification. Your account will be activated after admin review.'
-          : 'Your account will be reviewed by our team before you can access the platform.'}
-      </p>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
-        <div className="flex gap-3">
-          {(['NATIONAL_ID', 'PASSPORT'] as DocumentType[]).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => update('documentType', type)}
-              className={`flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-colors ${
-                form.documentType === type
-                  ? 'border-brand-teal bg-brand-teal/5 text-brand-teal'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              {type === 'NATIONAL_ID' ? 'National ID' : 'Passport'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Upload {form.documentType === 'NATIONAL_ID' ? 'National ID' : 'Passport'}
-        </label>
-
-        {!form.file ? (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="w-full flex flex-col items-center gap-2 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-brand-teal transition-colors"
-          >
-            <Upload className="w-6 h-6 text-gray-400" />
-            <span className="text-sm text-gray-600">Click to upload JPG, PNG, or PDF (max 5MB)</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-            {previewUrl ? (
-              <img src={previewUrl} alt="Document preview" className="w-14 h-14 object-cover rounded-md" />
-            ) : (
-              <FileText className="w-10 h-10 text-brand-teal" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">{form.file.name}</p>
-              <p className="text-xs text-gray-500">{(form.file.size / 1024 / 1024).toFixed(2)} MB</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onFileChange(null)}
-              className="text-gray-400 hover:text-red-600"
-              aria-label="Remove file"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,application/pdf"
-          className="hidden"
-          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-        />
-      </div>
-
-      {form.role === 'LANDLORD' && (
-        <div>
-          <label htmlFor="propertyNote" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Property Ownership Note <span className="text-gray-400">(optional)</span>
-          </label>
-          <textarea
-            id="propertyNote"
-            value={form.propertyNote}
-            onChange={(e) => update('propertyNote', e.target.value)}
-            rows={3}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
-            placeholder="Tell us about the properties you own or manage"
-          />
-        </div>
-      )}
     </div>
   );
 }

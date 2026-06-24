@@ -27,7 +27,7 @@ export const GET = withAuth(['ADMIN'])(
       ];
     }
 
-    const [users, allUsers, landlords, activeRenters, needsReview, platformManagers] =
+    const [fetchedUsers, allUsers, landlords, activeRenters, needsReview, platformManagers] =
       await Promise.all([
         prisma.user.findMany({ where, orderBy: { created_at: 'desc' } }),
         prisma.user.count(),
@@ -36,6 +36,17 @@ export const GET = withAuth(['ADMIN'])(
         prisma.user.count({ where: { OR: [{ status: 'PENDING' }, { kyc_status: 'PENDING' }] } }),
         prisma.user.count({ where: { role: 'ADMIN' } }),
       ]);
+
+    let users = fetchedUsers;
+    if (tab === 'PENDING') {
+      const checked = await Promise.all(
+        fetchedUsers.map(async (u) => {
+          const { data } = await supabaseAdmin.auth.admin.getUserById(u.id);
+          return { user: u, emailVerified: !!data.user?.email_confirmed_at };
+        })
+      );
+      users = checked.filter((c) => c.emailVerified).map((c) => c.user);
+    }
 
     return NextResponse.json({
       success: true,
@@ -49,7 +60,7 @@ export const GET = withAuth(['ADMIN'])(
 
 const updateStatusSchema = z.object({
   userId: z.string(),
-  status: z.enum(['ACTIVE', 'PENDING', 'BANNED', 'SUSPENDED']),
+  status: z.enum(['ACTIVE', 'PENDING', 'REJECTED', 'BANNED', 'SUSPENDED']),
 });
 
 export const PATCH = withAuth(['ADMIN'])(

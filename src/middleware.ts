@@ -2,8 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PROTECTED_ROUTES: Record<string, { requiredRole: string; extraGates: string[] }> = {
-  '/tenant': { requiredRole: 'TENANT', extraGates: [] },
-  '/landlord': { requiredRole: 'LANDLORD', extraGates: ['KYC_APPROVED', 'REGISTRATION_PAID'] },
+  '/tenant': { requiredRole: 'TENANT', extraGates: ['ACCOUNT_ACTIVE'] },
+  '/landlord': { requiredRole: 'LANDLORD', extraGates: ['ACCOUNT_ACTIVE', 'REGISTRATION_PAID'] },
   '/admin': { requiredRole: 'ADMIN', extraGates: ['TWO_FA_VERIFIED'] },
 };
 
@@ -80,16 +80,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
-  if (config.extraGates.includes('KYC_APPROVED')) {
-    const kycStatus = user.user_metadata?.kyc_status as string;
-    if (kycStatus !== 'APPROVED') {
-      return NextResponse.redirect(new URL('/onboarding/kyc-pending', request.url));
+  if (config.extraGates.includes('ACCOUNT_ACTIVE')) {
+    if (status === 'PENDING' && pathname !== '/onboarding/account-pending') {
+      return NextResponse.redirect(new URL('/onboarding/account-pending', request.url));
     }
   }
 
   if (config.extraGates.includes('REGISTRATION_PAID')) {
+    const kycStatus = user.user_metadata?.kyc_status as string;
     const regPaid = user.user_metadata?.registration_paid as boolean;
-    if (!regPaid) {
+    if (kycStatus === 'APPROVED' && !regPaid && pathname !== '/onboarding/payment-required') {
       return NextResponse.redirect(new URL('/onboarding/payment-required', request.url));
     }
   }

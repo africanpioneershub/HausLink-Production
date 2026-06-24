@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
@@ -45,6 +47,15 @@ interface PreferencesData {
 }
 
 export default function TenantSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TenantSettingsContent />
+    </Suspense>
+  );
+}
+
+function TenantSettingsContent() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabKey>('PROFILE');
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [preferences, setPreferences] = useState<PreferencesData | null>(null);
@@ -52,12 +63,22 @@ export default function TenantSettingsPage() {
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [documentType, setDocumentType] = useState<'NATIONAL_ID' | 'PASSPORT'>('NATIONAL_ID');
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'verification') {
+      setActiveTab('VERIFICATION');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetch('/api/user/profile')
@@ -106,6 +127,31 @@ export default function TenantSettingsPage() {
       if (!error) setNewPassword('');
     } finally {
       setSavingPassword(false);
+    }
+  }
+
+  async function handleKycSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file) {
+      setUploadError('Please select a file to upload');
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', documentType);
+      const res = await fetch('/api/kyc/submit', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (!json.success) {
+        setUploadError(json.error ?? 'Failed to upload document');
+        return;
+      }
+      setFile(null);
+      setProfile((prev) => (prev ? { ...prev, kyc_status: 'PENDING' } : prev));
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -234,6 +280,60 @@ export default function TenantSettingsPage() {
             </span>
           </div>
           <p className="text-sm text-gray-600">{KYC_MESSAGE[profile.kyc_status]}</p>
+
+          {profile.kyc_status === 'NOT_SUBMITTED' || profile.kyc_status === 'REJECTED' ? (
+            <form onSubmit={handleKycSubmit} className="mt-5 space-y-4">
+              {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Document Type
+                </label>
+                <div className="flex gap-3">
+                  {(['NATIONAL_ID', 'PASSPORT'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setDocumentType(type)}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-colors',
+                        documentType === type
+                          ? 'border-brand-teal bg-brand-teal/5 text-brand-teal'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      )}
+                    >
+                      {type === 'NATIONAL_ID' ? 'National ID' : 'Passport'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Document
+                </label>
+                <label className="flex flex-col items-center gap-2 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-brand-teal transition-colors cursor-pointer">
+                  <Upload className="w-6 h-6 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {file ? file.name : 'Click to upload JPG, PNG, or PDF (max 5MB)'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,application/pdf"
+                    className="hidden"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                disabled={uploading}
+                className="bg-brand-teal text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {uploading ? 'Uploading…' : 'Submit Documents'}
+              </button>
+            </form>
+          ) : profile.kyc_status === 'PENDING' ? (
+            <p className="mt-4 text-sm text-gray-500">Documents under review.</p>
+          ) : null}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 export type UserRole = 'TENANT' | 'LANDLORD' | 'ADMIN';
 
-export type UserStatus = 'ACTIVE' | 'PENDING' | 'BANNED' | 'SUSPENDED';
+export type UserStatus = 'ACTIVE' | 'PENDING' | 'REJECTED' | 'BANNED' | 'SUSPENDED';
 
 export type KYCStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 

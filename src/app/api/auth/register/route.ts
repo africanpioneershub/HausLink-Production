@@ -13,7 +13,7 @@ const registerSchema = z.object({
   role: z.enum(['TENANT', 'LANDLORD']),
   phone: z.string().min(4).max(20),
   whatsapp: z.string().min(4).max(20),
-  city: z.string().max(100).optional(),
+  city: z.string().min(1).max(100),
   district: z.string().min(1).max(100),
   countryCode: z.string().min(1).max(6),
   whatsappCountryCode: z.string().min(1).max(6),

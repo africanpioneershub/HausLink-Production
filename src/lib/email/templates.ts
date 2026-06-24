@@ -36,6 +36,51 @@ export async function sendWelcomeEmail({
   );
 }
 
+export async function sendAccountApprovedEmail({
+  name,
+  email,
+  role,
+}: {
+  name: string;
+  email: string;
+  role: 'TENANT' | 'LANDLORD';
+}) {
+  const whatCanYouDo =
+    role === 'LANDLORD'
+      ? 'Upload your ID to start listing properties.'
+      : 'Browse and save properties.';
+
+  await send(
+    email,
+    'Your HausLink account is approved!',
+    `<p>Great news ${name}!</p>
+     <p>Your HausLink account has been approved. You can now log in and start using the platform.</p>
+     <p><a href="https://hauslink.vercel.app/login">Log in to HausLink</a></p>
+     <p><strong>What you can do now:</strong> ${whatCanYouDo}</p>
+     <p>— The HausLink Team</p>`
+  );
+}
+
+export async function sendAccountRejectedEmail({
+  name,
+  email,
+  reason,
+}: {
+  name: string;
+  email: string;
+  reason: string;
+}) {
+  await send(
+    email,
+    'HausLink account update',
+    `<p>Hi ${name},</p>
+     <p>We were unable to approve your HausLink account.</p>
+     <p><strong>Reason:</strong> ${reason}</p>
+     <p>Please contact our support team if you have questions.</p>
+     <p>— The HausLink Team</p>`
+  );
+}
+
 export async function sendKYCApprovedEmail({
   name,
   email,

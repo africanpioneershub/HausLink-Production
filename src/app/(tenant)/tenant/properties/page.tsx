@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
 
+type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+
 interface PropertyListItem {
   id: string;
   title: string;
@@ -41,8 +43,22 @@ export default function TenantPropertiesPage() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatus>('NOT_SUBMITTED');
+  const [kycModal, setKycModal] = useState<KycStatus | null>(null);
+
+  useEffect(() => {
+    fetch('/api/user/profile')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) setKycStatus(json.data.kyc_status);
+      });
+  }, []);
 
   async function handleApply(propertyId: string) {
+    if (kycStatus !== 'APPROVED') {
+      setKycModal(kycStatus);
+      return;
+    }
     setApplyingId(propertyId);
     try {
       const res = await fetch('/api/tenant/applications', {
@@ -214,6 +230,61 @@ export default function TenantPropertiesPage() {
               {p}
             </button>
           ))}
+        </div>
+      )}
+
+      {kycModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-center">
+            {kycModal === 'NOT_SUBMITTED' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  Verify your identity to apply
+                </h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  To apply for properties you need to upload a valid ID document.
+                </p>
+                <Link
+                  href="/tenant/settings?tab=verification"
+                  className="block w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Upload Documents
+                </Link>
+              </>
+            )}
+            {kycModal === 'PENDING' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  Verification in progress
+                </h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  Your documents are being reviewed. You can apply once verified (24-48 hours).
+                </p>
+              </>
+            )}
+            {kycModal === 'REJECTED' && (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  Verification was rejected
+                </h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  Please resubmit a valid ID document to continue.
+                </p>
+                <Link
+                  href="/tenant/settings?tab=verification"
+                  className="block w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Upload Documents
+                </Link>
+              </>
+            )}
+            <button
+              onClick={() => setKycModal(null)}
+              className="mt-3 w-full border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>
