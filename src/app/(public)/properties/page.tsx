@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { PropertyCard, type PropertyCardData } from '@/components/public/PropertyCard';
 
 const PAGE_SIZE = 6;
@@ -40,6 +41,35 @@ function toCardData(item: PublicPropertyApiItem): PropertyCardData {
   };
 }
 
+const PROPERTY_TYPES = [
+  { value: '', label: 'All' },
+  { value: 'APARTMENT', label: 'Apartment' },
+  { value: 'HOUSE', label: 'House' },
+  { value: 'VILLA', label: 'Villa' },
+  { value: 'STUDIO', label: 'Studio' },
+  { value: 'OFFICE', label: 'Office' },
+];
+
+const DISTRICTS = [
+  'Gasabo',
+  'Kicukiro',
+  'Nyarugenge',
+  'Kimihurura',
+  'Gisozi',
+  'Kacyiru',
+  'Kibagabaga',
+  'Kanombe',
+  'Remera',
+  'Gikondo',
+  'Nyarutarama',
+  'Kagugu',
+  'Butamwa',
+  'Batsinda',
+  'Nyamirambo',
+];
+
+const BEDROOM_OPTIONS = ['Any', '1', '2', '3', '4+'];
+
 export default function PublicPropertiesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -47,10 +77,25 @@ export default function PublicPropertiesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterType, setFilterType] = useState('');
+  const [filterDistrict, setFilterDistrict] = useState('');
+  const [filterMinPrice, setFilterMinPrice] = useState('');
+  const [filterMaxPrice, setFilterMaxPrice] = useState('');
+  const [filterBeds, setFilterBeds] = useState('');
+
+  const activeFilterCount = [filterType, filterDistrict, filterMinPrice, filterMaxPrice, filterBeds]
+    .filter(Boolean).length;
+
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (search.trim()) params.set('search', search.trim());
+    if (filterType) params.set('type', filterType);
+    if (filterDistrict) params.set('district', filterDistrict);
+    if (filterMinPrice) params.set('minPrice', filterMinPrice);
+    if (filterMaxPrice) params.set('maxPrice', filterMaxPrice);
+    if (filterBeds) params.set('beds', filterBeds);
 
     fetch(`/api/public/properties?${params.toString()}`)
       .then((res) => res.json())
@@ -62,9 +107,22 @@ export default function PublicPropertiesPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [search, page]);
+  }, [search, page, filterType, filterDistrict, filterMinPrice, filterMaxPrice, filterBeds]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function handleApplyFilters() {
+    setPage(1);
+  }
+
+  function handleClearFilters() {
+    setFilterType('');
+    setFilterDistrict('');
+    setFilterMinPrice('');
+    setFilterMaxPrice('');
+    setFilterBeds('');
+    setPage(1);
+  }
 
   return (
     <div className="bg-white">
@@ -77,7 +135,7 @@ export default function PublicPropertiesPage() {
           <p className="text-gray-500 text-sm">({total} Listings)</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3 mb-10">
+        <div className="flex flex-col lg:flex-row gap-3">
           <input
             type="text"
             value={search}
@@ -89,8 +147,12 @@ export default function PublicPropertiesPage() {
             className="flex-1 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           />
           <div className="flex gap-2">
-            <button className="border border-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-wide px-4 py-3 rounded-lg hover:border-brand-teal hover:text-brand-teal transition-colors">
-              Advanced Filters
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-wide px-4 py-3 rounded-lg hover:border-brand-teal hover:text-brand-teal transition-colors"
+            >
+              {activeFilterCount > 0 ? `Advanced Filters (${activeFilterCount})` : 'Advanced Filters'}
+              {showFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={() => {
@@ -107,17 +169,115 @@ export default function PublicPropertiesPage() {
           </div>
         </div>
 
-        {loading ? (
-          <p className="text-sm text-gray-500 mb-12">Loading properties…</p>
-        ) : properties.length === 0 ? (
-          <p className="text-sm text-gray-500 mb-12">No properties found.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
+        {showFilters && (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mt-4 space-y-6">
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">Property Type</p>
+              <div className="flex flex-wrap gap-2">
+                {PROPERTY_TYPES.map((type) => (
+                  <button
+                    key={type.value}
+                    onClick={() => setFilterType(type.value)}
+                    className={`text-xs font-semibold px-4 py-2 rounded-full transition-colors ${
+                      filterType === type.value
+                        ? 'bg-brand-teal text-white'
+                        : 'bg-white border border-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">District</p>
+              <select
+                value={filterDistrict}
+                onChange={(e) => setFilterDistrict(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              >
+                <option value="">All Districts</option>
+                {DISTRICTS.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">Price Range (RWF / month)</p>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  value={filterMinPrice}
+                  onChange={(e) => setFilterMinPrice(e.target.value)}
+                  placeholder="Min e.g. 50,000"
+                  className="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                />
+                <input
+                  type="number"
+                  value={filterMaxPrice}
+                  onChange={(e) => setFilterMaxPrice(e.target.value)}
+                  placeholder="Max e.g. 2,000,000"
+                  className="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">Bedrooms</p>
+              <div className="flex flex-wrap gap-2">
+                {BEDROOM_OPTIONS.map((option) => {
+                  const value = option === 'Any' ? '' : option;
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => setFilterBeds(value)}
+                      className={`text-xs font-semibold px-4 py-2 rounded-full transition-colors ${
+                        filterBeds === value
+                          ? 'bg-brand-teal text-white'
+                          : 'bg-white border border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={handleClearFilters}
+                className="text-sm text-gray-500 underline hover:text-gray-700"
+              >
+                Clear Filters
+              </button>
+              <button
+                onClick={handleApplyFilters}
+                className="bg-brand-teal text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         )}
+
+        <div className="mb-12 mt-10">
+          {loading ? (
+            <p className="text-sm text-gray-500">Loading properties…</p>
+          ) : properties.length === 0 ? (
+            <p className="text-sm text-gray-500">No properties found.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {properties.map((property) => (
+                <PropertyCard key={property.id} property={property} />
+              ))}
+            </div>
+          )}
+        </div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2">

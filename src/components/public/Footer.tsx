@@ -35,6 +35,14 @@ function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function TikTokIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.24 8.24 0 0 0 4.84 1.56V6.8a4.85 4.85 0 0 1-1.07-.11Z"/>
+    </svg>
+  );
+}
+
 export function Footer() {
   const year = new Date().getFullYear();
 
@@ -121,7 +129,7 @@ export function Footer() {
           <p className="text-sm font-semibold uppercase tracking-wide mb-3">Social</p>
           <div className="flex items-center gap-3">
             <a
-              href="https://facebook.com"
+              href="https://www.facebook.com/heri.josuah"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
@@ -130,7 +138,7 @@ export function Footer() {
               <FacebookIcon className="w-4 h-4" />
             </a>
             <a
-              href="https://twitter.com"
+              href="https://x.com/heri_joshua01"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Twitter"
@@ -139,7 +147,7 @@ export function Footer() {
               <TwitterIcon className="w-4 h-4" />
             </a>
             <a
-              href="https://instagram.com"
+              href="https://www.instagram.com/herijoshua85/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
@@ -148,13 +156,22 @@ export function Footer() {
               <InstagramIcon className="w-4 h-4" />
             </a>
             <a
-              href="https://linkedin.com"
+              href="https://www.linkedin.com/in/heri-joshua-510910214"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="LinkedIn"
               className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
             >
               <LinkedinIcon className="w-4 h-4" />
+            </a>
+            <a
+              href="https://www.tiktok.com/@henryjoshua01?lang=en"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="TikTok"
+              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+            >
+              <TikTokIcon className="w-4 h-4" />
             </a>
           </div>
         </div>

@@ -38,11 +38,6 @@ export function PropertyCard({ property }: { property: PropertyCardData }) {
         )}
 
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
-          {property.verified && (
-            <span className="bg-green-600 text-white text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded">
-              Verified
-            </span>
-          )}
           {property.premium && (
             <span className="bg-brand-teal text-white text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded">
               Premium

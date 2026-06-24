@@ -16,10 +16,11 @@ export async function GET(request: Request) {
   const minPrice = url.searchParams.get('minPrice');
   const maxPrice = url.searchParams.get('maxPrice');
   const featured = url.searchParams.get('featured');
+  const beds = url.searchParams.get('beds');
   const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'));
   const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get('pageSize') ?? String(DEFAULT_PAGE_SIZE))));
 
-  const cacheKey = `public:properties:${search ?? ''}:${type ?? ''}:${district ?? ''}:${minPrice ?? ''}:${maxPrice ?? ''}:${featured ?? ''}:${page}:${pageSize}`;
+  const cacheKey = `public:properties:${search ?? ''}:${type ?? ''}:${district ?? ''}:${minPrice ?? ''}:${maxPrice ?? ''}:${featured ?? ''}:${beds ?? ''}:${page}:${pageSize}`;
   const fallback = { data: [], total: 0, page, pageSize };
 
   try {
@@ -44,6 +45,13 @@ export async function GET(request: Request) {
     };
   }
   if (featured === 'true') where.featured = true;
+  if (beds && beds !== 'Any') {
+    if (beds === '4+') {
+      where.bedrooms = { gte: 4 };
+    } else {
+      where.bedrooms = Number(beds);
+    }
+  }
 
   let result;
   try {

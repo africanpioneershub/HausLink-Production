@@ -2,17 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  Search,
-  FileText,
-  Key,
-  Building2,
-  Wallet,
-  Wrench,
-  Star,
-  MessageSquare,
-  BarChart3,
-} from 'lucide-react';
+import { Building2, Wallet, Wrench, Star } from 'lucide-react';
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
 import { PropertyCard, type PropertyCardData } from '@/components/public/PropertyCard';
@@ -59,66 +49,6 @@ const FILTER_TABS = [
   'VERIFIED LANDLORDS',
   'AFFORDABLE RENTALS',
   'STUDENT HOUSING',
-];
-
-const STEPS = [
-  {
-    number: '1',
-    title: 'Search',
-    description: 'Browse verified listings',
-    icon: Search,
-  },
-  {
-    number: '2',
-    title: 'Apply',
-    description: 'Submit application online',
-    icon: FileText,
-  },
-  {
-    number: '3',
-    title: 'Move In',
-    description: 'Get approved and move in',
-    icon: Key,
-  },
-];
-
-const FEATURES = [
-  {
-    title: 'Smart Property Search',
-    description: 'Filter listings by district, price, and type to find the right home fast.',
-    icon: Search,
-    color: 'text-blue-600 bg-blue-50',
-  },
-  {
-    title: 'Secure Rent Payments',
-    description: 'Pay and collect rent securely via MTN MoMo, Airtel Money, or card.',
-    icon: Wallet,
-    color: 'text-green-600 bg-green-50',
-  },
-  {
-    title: 'Maintenance Tracking',
-    description: 'Log, track, and resolve maintenance requests in one place.',
-    icon: Wrench,
-    color: 'text-orange-600 bg-orange-50',
-  },
-  {
-    title: 'Direct Messaging',
-    description: 'Chat directly with tenants or landlords without leaving the platform.',
-    icon: MessageSquare,
-    color: 'text-purple-600 bg-purple-50',
-  },
-  {
-    title: 'Online Applications',
-    description: 'Submit and review rental applications entirely online.',
-    icon: FileText,
-    color: 'text-red-600 bg-red-50',
-  },
-  {
-    title: 'Finance & Reports',
-    description: 'Track income, expenses, and occupancy with real-time reports.',
-    icon: BarChart3,
-    color: 'text-brand-teal bg-brand-teal/10',
-  },
 ];
 
 const LANDLORD_FEATURES = [
@@ -223,9 +153,6 @@ export default function Home() {
         {/* Section 1 — Hero */}
         <section className="relative overflow-hidden bg-[#1A2B4A]">
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-            <span className="inline-flex items-center bg-white/10 text-white/90 rounded-full px-4 py-1 text-xs font-medium mb-6">
-              ✦ Trusted by 200+ Verified Landlords across Rwanda
-            </span>
             <h1 className="text-5xl lg:text-7xl font-extrabold text-white tracking-tight">
               Find Homes. Manage Properties. <span className="text-[#00D4A0]">All-in-HausLink.</span>
             </h1>
@@ -265,9 +192,6 @@ export default function Home() {
         <section className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="text-center mb-10">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-teal mb-2">
-                Featured Properties
-              </p>
               <h2 className="text-3xl font-bold text-gray-900">Featured Properties</h2>
               <p className="mt-3 text-gray-600">
                 Explore our most popular and highly-rated listings
@@ -337,64 +261,6 @@ export default function Home() {
               {catalogProperties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4.5 — Features Grid */}
-        <section className="bg-white border-t border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="text-center mb-12">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-teal mb-2">
-                Features
-              </p>
-              <h2 className="text-3xl font-bold text-gray-900">
-                Everything you need in one platform
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {FEATURES.map((feature) => {
-                const Icon = feature.icon;
-                return (
-                  <div
-                    key={feature.title}
-                    className="bg-white border border-gray-100 rounded-xl shadow-sm p-6"
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${feature.color}`}
-                    >
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-1.5">{feature.title}</h3>
-                    <p className="text-sm text-gray-600">{feature.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Section 5 — How It Works */}
-        <section className="bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <p className="text-xs font-bold uppercase tracking-wide text-brand-teal text-center mb-2">
-              How It Works
-            </p>
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How It Works</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
-              {STEPS.map((step) => {
-                const Icon = step.icon;
-                return (
-                  <div key={step.number} className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-brand-teal text-white flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                      {step.number}
-                    </div>
-                    <Icon className="w-8 h-8 text-brand-teal mx-auto mb-3" />
-                    <h3 className="font-bold text-gray-900 mb-1">{step.title}</h3>
-                    <p className="text-sm text-gray-600">{step.description}</p>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </section>
