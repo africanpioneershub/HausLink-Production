@@ -8,10 +8,37 @@ import { initiateAirtelPayment } from '@/lib/payments/airtel';
 
 const initiateSchema = z.object({
   tenancyId: z.string().min(1),
-  method: z.enum(['MTN_MOMO', 'AIRTEL_MONEY']),
-  phoneNumber: z.string().min(4).max(20),
-  amount: z.number().int().positive(),
+  method: z.enum(['MTN_MOMO', 'AIRTEL_MONEY', 'STRIPE']),
+  phoneNumber: z.string().min(4).max(20).optional(),
+  amount: z.number().int().positive().optional(),
 });
+
+interface PaymentInstructions {
+  message: string;
+  steps: string[];
+}
+
+function buildInstructions(method: 'MTN_MOMO' | 'AIRTEL_MONEY' | 'STRIPE'): PaymentInstructions {
+  if (method === 'MTN_MOMO') {
+    return {
+      message: 'Payment request sent to your phone',
+      steps: [
+        'Check your phone for an MTN MoMo prompt',
+        'Enter your MoMo PIN to confirm payment',
+        'You will receive a confirmation SMS',
+      ],
+    };
+  }
+
+  return {
+    message: 'Payment request sent to your phone',
+    steps: [
+      'Check your phone for an Airtel Money prompt',
+      'Enter your Airtel Money PIN to confirm payment',
+      'You will receive a confirmation SMS',
+    ],
+  };
+}
 
 export const POST = withAuth(['TENANT'])(
   async (request, _context, user) => {
@@ -24,7 +51,21 @@ export const POST = withAuth(['TENANT'])(
       );
     }
 
-    const { tenancyId, method, phoneNumber, amount } = parsed.data;
+    const { tenancyId, method, phoneNumber, amount: amountOverride } = parsed.data;
+
+    if (method === 'STRIPE') {
+      return NextResponse.json(
+        { success: false, error: 'Card payments are not yet available', code: 'NOT_SUPPORTED' },
+        { status: 400 }
+      );
+    }
+
+    if (!phoneNumber) {
+      return NextResponse.json(
+        { success: false, error: 'Phone number is required', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
 
     const tenancy = await prisma.tenancy.findUnique({
       where: { id: tenancyId },
@@ -36,6 +77,34 @@ export const POST = withAuth(['TENANT'])(
         { success: false, error: 'Tenancy not found', code: 'NOT_FOUND' },
         { status: 404 }
       );
+    }
+
+    const amount = amountOverride ?? tenancy.rent_rwf;
+
+    // Prevent duplicate in-flight requests: if the tenant already has a
+    // pending rent payment for this tenancy, return it instead of creating
+    // a second one.
+    const existingPending = await prisma.payment.findFirst({
+      where: {
+        tenant_id: user.id,
+        tenancy_id: tenancy.id,
+        status: 'PENDING',
+        type: 'MONTHLY_RENT',
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (existingPending) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          paymentId: existingPending.id,
+          status: 'PENDING',
+          method: existingPending.method,
+          amount: existingPending.amount_rwf,
+          instructions: buildInstructions(existingPending.method as 'MTN_MOMO' | 'AIRTEL_MONEY'),
+        },
+      });
     }
 
     const idempotencyKey = generateIdempotencyKey();
@@ -86,15 +155,16 @@ export const POST = withAuth(['TENANT'])(
       data: { txn_ref: result.transactionId },
     });
 
-    const instructions =
-      method === 'MTN_MOMO'
-        ? 'Approve the payment prompt sent to your MTN MoMo phone to complete the transaction.'
-        : 'Approve the payment prompt sent to your Airtel Money phone to complete the transaction.';
-
     return NextResponse.json(
       {
         success: true,
-        data: { paymentId: payment.id, status: 'PENDING', instructions },
+        data: {
+          paymentId: payment.id,
+          status: 'PENDING',
+          method,
+          amount,
+          instructions: buildInstructions(method),
+        },
       },
       { status: 201 }
     );

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "worker": "npx ts-node --esm src/worker.ts",
+    "setup:momo": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/setup-momo-sandbox.ts",
     "postinstall": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate"
   },
   "dependencies": {

@@ -2,6 +2,7 @@ import { AlertCircle } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma/client';
 import { cn, formatDate, formatRwf } from '@/lib/utils';
+import { PayRentButton } from '@/components/tenant/PayRentButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,10 @@ export default async function TenantPaymentsPage() {
   if (!user) return null;
 
   const [activeTenancy, payments] = await Promise.all([
-    prisma.tenancy.findFirst({ where: { tenant_id: user.id, status: 'ACTIVE' } }),
+    prisma.tenancy.findFirst({
+      where: { tenant_id: user.id, status: 'ACTIVE' },
+      include: { property: true },
+    }),
     prisma.payment.findMany({
       where: { tenant_id: user.id },
       orderBy: { created_at: 'desc' },
@@ -29,7 +33,17 @@ export default async function TenantPaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
+        {activeTenancy && (
+          <PayRentButton
+            tenancyId={activeTenancy.id}
+            propertyTitle={activeTenancy.property.title}
+            amount={activeTenancy.rent_rwf}
+            initialPhone={(user.user_metadata?.phone as string) ?? undefined}
+          />
+        )}
+      </div>
 
       {!activeTenancy && (
         <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 text-sm">
