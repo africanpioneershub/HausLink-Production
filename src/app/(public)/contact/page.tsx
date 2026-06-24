@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
   async function handleSubmit(e: React.FormEvent) {
@@ -21,7 +21,7 @@ export default function ContactPage() {
       if (!res.ok) throw new Error('Failed to submit');
 
       setStatus('success');
-      setForm({ name: '', email: '', subject: '', message: '' });
+      setForm({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch {
       setStatus('error');
     }
@@ -62,6 +62,21 @@ export default function ContactPage() {
                 placeholder="you@example.com"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contact-phone" className="block text-sm font-semibold text-gray-700 mb-1">
+                Phone <span className="text-gray-400 font-normal">(optional, for WhatsApp confirmation)</span>
+              </label>
+              <input
+                id="contact-phone"
+                name="phone"
+                type="tel"
+                placeholder="+250788xxxxxx"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               />
             </div>

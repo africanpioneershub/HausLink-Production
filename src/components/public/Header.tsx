@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
 const NAV_LINKS = [
-  { label: 'HOME', href: '/' },
-  { label: 'PROPERTIES', href: '/properties' },
-  { label: 'HOW IT WORKS', href: '/how-it-works' },
-  { label: 'CONTACT', href: '/contact' },
-  { label: 'LOGIN', href: '/login' },
+  { label: 'Features', href: '/how-it-works' },
+  { label: 'Testimonial', href: '/#testimonials' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
+  { label: 'FAQ', href: '/faq' },
 ];
 
 export function Header() {
@@ -38,12 +39,18 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-5">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-gray-600 hover:text-brand-teal transition-colors"
+          >
+            Log in
+          </Link>
           <Link
             href="/register"
             className="bg-brand-teal text-white px-5 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Sign Up
+            Start Free Trial
           </Link>
         </div>
 
@@ -69,11 +76,18 @@ export function Header() {
             </Link>
           ))}
           <Link
+            href="/login"
+            onClick={() => setOpen(false)}
+            className="block text-center text-sm font-medium text-gray-600 hover:text-brand-teal transition-colors"
+          >
+            Log in
+          </Link>
+          <Link
             href="/register"
             onClick={() => setOpen(false)}
             className="block text-center bg-brand-teal text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Sign Up
+            Start Free Trial
           </Link>
         </div>
       )}

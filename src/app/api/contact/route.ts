@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma/client';
+import { sendContactFormEmail } from '@/lib/email/templates';
+import { sendWhatsAppContactConfirmation } from '@/lib/whatsapp/templates';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(150),
   email: z.string().email('Enter a valid email address'),
   subject: z.string().min(2, 'Subject must be at least 2 characters').max(150),
   message: z.string().min(5, 'Message must be at least 5 characters').max(5000),
+  phone: z.string().min(4).max(20).optional(),
 });
 
 export async function POST(request: Request) {
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, subject, message } = parsed.data;
+  const { name, email, subject, message, phone } = parsed.data;
 
   try {
     await prisma.reportFlag.create({
@@ -44,6 +47,15 @@ export async function POST(request: Request) {
       message,
       error: dbError,
     });
+  }
+
+  sendContactFormEmail({ name, email, subject, message }).catch((error) =>
+    console.error('[contact] Email failed', error)
+  );
+  if (phone) {
+    sendWhatsAppContactConfirmation({ phone, name }).catch((error) =>
+      console.error('[contact] WhatsApp failed', error)
+    );
   }
 
   return NextResponse.json({ success: true }, { status: 201 });

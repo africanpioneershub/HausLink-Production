@@ -3,6 +3,8 @@ import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { AUDIT_ACTIONS } from '@/lib/constants';
+import { sendMaintenanceUpdateEmail } from '@/lib/email/templates';
+import { sendWhatsAppMaintenanceUpdate } from '@/lib/whatsapp/templates';
 
 export const POST = withAuth(['ADMIN'])(
   async (request, context, admin) => {
@@ -33,6 +35,27 @@ export const POST = withAuth(['ADMIN'])(
       ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
       metadata: note ? { note } : undefined,
     });
+
+    const tenant = await prisma.user.findUnique({ where: { id: maintenanceRequest.tenant_id } });
+    if (tenant) {
+      sendMaintenanceUpdateEmail({
+        tenantName: tenant.name ?? 'there',
+        tenantEmail: tenant.email,
+        requestTitle: maintenanceRequest.title,
+        status: updated.status,
+        note,
+      }).catch((error) => console.error('[maintenance assign] Email failed', error));
+
+      if (tenant.phone) {
+        sendWhatsAppMaintenanceUpdate({
+          phone: tenant.phone,
+          tenantName: tenant.name ?? 'there',
+          requestTitle: maintenanceRequest.title,
+          status: updated.status,
+          note,
+        }).catch((error) => console.error('[maintenance assign] WhatsApp failed', error));
+      }
+    }
 
     return NextResponse.json({ success: true, data: updated });
   }

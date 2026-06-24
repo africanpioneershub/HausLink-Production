@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn, formatDate } from '@/lib/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 
 interface ConversationListItem {
   id: string;
@@ -28,6 +29,7 @@ export default function LandlordMessagesPage() {
   const [messageBody, setMessageBody] = useState('');
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/landlord/messages')
@@ -57,6 +59,38 @@ export default function LandlordMessagesPage() {
         }
       });
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const supabase = createBrowserSupabaseClient();
+    const channel = supabase
+      .channel(`messages:${selectedId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedId}`,
+        },
+        (payload: RealtimePostgresInsertPayload<MessageItem>) => {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -159,6 +193,7 @@ export default function LandlordMessagesPage() {
                   </p>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             <form onSubmit={handleSend} className="px-6 py-4 border-t border-gray-100 flex gap-3">
               <input

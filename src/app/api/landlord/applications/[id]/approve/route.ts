@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
+import { sendApplicationStatusEmail } from '@/lib/email/templates';
+import { sendWhatsAppApplicationStatus } from '@/lib/whatsapp/templates';
 
 export const POST = withAuth(['LANDLORD'])(
   async (_request, context, user) => {
@@ -50,6 +52,25 @@ export const POST = withAuth(['LANDLORD'])(
         data: { status: 'OCCUPIED' },
       }),
     ]);
+
+    const tenant = await prisma.user.findUnique({ where: { id: application.tenant_id } });
+    if (tenant) {
+      sendApplicationStatusEmail({
+        tenantName: tenant.name ?? 'there',
+        tenantEmail: tenant.email,
+        propertyTitle: application.property.title,
+        status: 'APPROVED',
+      }).catch((error) => console.error('[application approve] Email failed', error));
+
+      if (tenant.phone) {
+        sendWhatsAppApplicationStatus({
+          phone: tenant.phone,
+          tenantName: tenant.name ?? 'there',
+          propertyTitle: application.property.title,
+          status: 'APPROVED',
+        }).catch((error) => console.error('[application approve] WhatsApp failed', error));
+      }
+    }
 
     return NextResponse.json({
       success: true,

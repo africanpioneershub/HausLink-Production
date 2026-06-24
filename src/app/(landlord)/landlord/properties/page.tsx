@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, CheckCircle2, FileEdit, Home, LayoutGrid, List } from 'lucide-react';
+import { Building2, CheckCircle2, FileEdit, Home, ImageIcon, LayoutGrid, List } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
+import { ImageUploader } from '@/components/landlord/ImageUploader';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
 
@@ -40,6 +41,7 @@ export default function LandlordPropertiesPage() {
   const [kpis, setKpis] = useState({ total: 0, available: 0, rented: 0, draft: 0 });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [managingImagesId, setManagingImagesId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -255,6 +257,20 @@ export default function LandlordPropertiesPage() {
                   {p.district}, {p.city}
                 </p>
                 <p className="font-semibold text-gray-900 mt-2">{formatRwf(p.rent_rwf)}/mo</p>
+                <button
+                  onClick={() =>
+                    setManagingImagesId((current) => (current === p.id ? null : p.id))
+                  }
+                  className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-teal hover:underline"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  {managingImagesId === p.id ? 'Hide Images' : 'Manage Images'}
+                </button>
+                {managingImagesId === p.id && (
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    <ImageUploader propertyId={p.id} />
+                  </div>
+                )}
               </div>
             </div>
           ))}

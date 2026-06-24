@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -10,11 +10,47 @@ import {
   Wallet,
   Wrench,
   Star,
+  MessageSquare,
+  BarChart3,
 } from 'lucide-react';
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
-import { PropertyCard } from '@/components/public/PropertyCard';
-import { FEATURED_PROPERTIES, CATALOG_PROPERTIES } from '@/lib/public/mock-properties';
+import { PropertyCard, type PropertyCardData } from '@/components/public/PropertyCard';
+
+interface PublicPropertyApiItem {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  district: string;
+  city: string;
+  bedrooms: number;
+  bathrooms: number;
+  rent_rwf: number;
+  view_count: number;
+  is_verified: boolean;
+  featured: boolean;
+  imageUrl: string | null;
+}
+
+function toCardData(item: PublicPropertyApiItem): PropertyCardData {
+  return {
+    id: item.id,
+    title: item.title,
+    district: item.district,
+    price: item.rent_rwf,
+    beds: item.bedrooms,
+    baths: item.bathrooms,
+    type: item.type,
+    rating: 0,
+    views: item.view_count,
+    verified: item.is_verified,
+    premium: item.featured,
+    featured: item.featured,
+    description: item.description ?? '',
+    imageUrl: item.imageUrl,
+  };
+}
 
 const FILTER_TABS = [
   'PREMIUM PROPERTIES',
@@ -23,13 +59,6 @@ const FILTER_TABS = [
   'VERIFIED LANDLORDS',
   'AFFORDABLE RENTALS',
   'STUDENT HOUSING',
-];
-
-const STATS = [
-  { value: '500+', label: 'Active Listings' },
-  { value: '200+', label: 'Verified Landlords' },
-  { value: '1,000+', label: 'Happy Tenants' },
-  { value: '10', label: 'Districts Covered' },
 ];
 
 const STEPS = [
@@ -50,6 +79,45 @@ const STEPS = [
     title: 'Move In',
     description: 'Get approved and move in',
     icon: Key,
+  },
+];
+
+const FEATURES = [
+  {
+    title: 'Smart Property Search',
+    description: 'Filter listings by district, price, and type to find the right home fast.',
+    icon: Search,
+    color: 'text-blue-600 bg-blue-50',
+  },
+  {
+    title: 'Secure Rent Payments',
+    description: 'Pay and collect rent securely via MTN MoMo, Airtel Money, or card.',
+    icon: Wallet,
+    color: 'text-green-600 bg-green-50',
+  },
+  {
+    title: 'Maintenance Tracking',
+    description: 'Log, track, and resolve maintenance requests in one place.',
+    icon: Wrench,
+    color: 'text-orange-600 bg-orange-50',
+  },
+  {
+    title: 'Direct Messaging',
+    description: 'Chat directly with tenants or landlords without leaving the platform.',
+    icon: MessageSquare,
+    color: 'text-purple-600 bg-purple-50',
+  },
+  {
+    title: 'Online Applications',
+    description: 'Submit and review rental applications entirely online.',
+    icon: FileText,
+    color: 'text-red-600 bg-red-50',
+  },
+  {
+    title: 'Finance & Reports',
+    description: 'Track income, expenses, and occupancy with real-time reports.',
+    icon: BarChart3,
+    color: 'text-brand-teal bg-brand-teal/10',
   },
 ];
 
@@ -74,21 +142,27 @@ const LANDLORD_FEATURES = [
 const TESTIMONIALS = [
   {
     name: 'Uwimana Alice',
+    initials: 'UA',
     role: 'Tenant',
+    location: 'Kigali',
     quote:
       'I found my apartment in Kimihurura within a week. The whole application process was fast and transparent.',
     rating: 5,
   },
   {
     name: 'Habimana Jean',
+    initials: 'HJ',
     role: 'Landlord',
+    location: 'Kigali',
     quote:
       'HausLink helped me list my properties and collect rent online without any hassle. Highly recommended.',
     rating: 5,
   },
   {
     name: 'Mutesi Grace',
+    initials: 'MG',
     role: 'Tenant',
+    location: 'Gasabo',
     quote:
       'Verified landlords gave me peace of mind. I moved into my new home in Nyarutarama faster than expected.',
     rating: 4,
@@ -98,6 +172,45 @@ const TESTIMONIALS = [
 export default function Home() {
   const [activeTab, setActiveTab] = useState(FILTER_TABS[0]);
   const [search, setSearch] = useState('');
+  const [featuredProperties, setFeaturedProperties] = useState<PropertyCardData[]>([]);
+  const [catalogProperties, setCatalogProperties] = useState<PropertyCardData[]>([]);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [stats, setStats] = useState([
+    { value: '0', label: 'Active Listings' },
+    { value: '0', label: 'Verified Landlords' },
+    { value: '0', label: 'Happy Tenants' },
+    { value: '0', label: 'Districts Covered' },
+  ]);
+
+  useEffect(() => {
+    fetch('/api/public/properties?featured=true&pageSize=6')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) setFeaturedProperties(json.data.data.map(toCardData));
+      });
+
+    fetch('/api/public/properties?pageSize=6')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setCatalogProperties(json.data.data.map(toCardData));
+          setCatalogTotal(json.data.total);
+        }
+      });
+
+    fetch('/api/public/stats')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setStats([
+            { value: `${json.data.activeListings}+`, label: 'Active Listings' },
+            { value: `${json.data.verifiedLandlords}+`, label: 'Verified Landlords' },
+            { value: `${json.data.happyTenants}+`, label: 'Happy Tenants' },
+            { value: `${json.data.districtsCovered}`, label: 'Districts Covered' },
+          ]);
+        }
+      });
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -105,27 +218,29 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Section 1 — Hero */}
-        <section className="relative overflow-hidden bg-white">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-teal/10 via-white to-white" />
+        <section className="relative overflow-hidden bg-[#1A2B4A]">
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
-              Find Homes. Manage Properties. <span className="text-teal-600">All-in-HausLink.</span>
+            <span className="inline-flex items-center bg-white/10 text-white/90 rounded-full px-4 py-1 text-xs font-medium mb-6">
+              ✦ Trusted by 200+ Verified Landlords across Rwanda
+            </span>
+            <h1 className="text-5xl lg:text-7xl font-extrabold text-white tracking-tight">
+              Find Homes. Manage Properties. <span className="text-[#00D4A0]">All-in-HausLink.</span>
             </h1>
-            <p className="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="mt-6 text-lg text-white/80 max-w-2xl mx-auto">
               Connect with verified landlords. Apply online. Move in faster.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href="/properties"
+                href="/register?role=TENANT"
                 className="bg-brand-teal text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
               >
-                Browse Properties
+                I&apos;m a Tenant
               </Link>
               <Link
-                href="/register"
-                className="border-2 border-brand-teal text-brand-teal px-8 py-3 rounded-lg font-semibold hover:bg-brand-teal/5 transition-colors"
+                href="/register?role=LANDLORD"
+                className="bg-white text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-white/90 transition-colors"
               >
-                List Your Property
+                I&apos;m a Landlord
               </Link>
             </div>
           </div>
@@ -134,7 +249,7 @@ export default function Home() {
         {/* Section 2 — Stats Bar */}
         <section className="bg-brand-teal">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
-            {STATS.map((stat) => (
+            {stats.map((stat) => (
               <div key={stat.label}>
                 <p className="text-3xl font-extrabold text-white">{stat.value}</p>
                 <p className="text-sm text-white/80 mt-1">{stat.label}</p>
@@ -147,6 +262,9 @@ export default function Home() {
         <section className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="text-center mb-10">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-teal mb-2">
+                Featured Properties
+              </p>
               <h2 className="text-3xl font-bold text-gray-900">Featured Properties</h2>
               <p className="mt-3 text-gray-600">
                 Explore our most popular and highly-rated listings
@@ -170,7 +288,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {FEATURED_PROPERTIES.map((property) => (
+              {featuredProperties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
             </div>
@@ -185,9 +303,7 @@ export default function Home() {
             </p>
             <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
               <h2 className="text-3xl font-bold text-gray-900">Available Rental Properties</h2>
-              <p className="text-gray-500 text-sm">
-                ({CATALOG_PROPERTIES.length} of {CATALOG_PROPERTIES.length} Listings)
-              </p>
+              <p className="text-gray-500 text-sm">({catalogTotal} Listings)</p>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-3 mb-10">
@@ -215,9 +331,42 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {CATALOG_PROPERTIES.map((property) => (
+              {catalogProperties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4.5 — Features Grid */}
+        <section className="bg-white border-t border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="text-center mb-12">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-teal mb-2">
+                Features
+              </p>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Everything you need in one platform
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {FEATURES.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <div
+                    key={feature.title}
+                    className="bg-white border border-gray-100 rounded-xl shadow-sm p-6"
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${feature.color}`}
+                    >
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-1.5">{feature.title}</h3>
+                    <p className="text-sm text-gray-600">{feature.description}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -225,6 +374,9 @@ export default function Home() {
         {/* Section 5 — How It Works */}
         <section className="bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand-teal text-center mb-2">
+              How It Works
+            </p>
             <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How It Works</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
               {STEPS.map((step) => {
@@ -247,6 +399,9 @@ export default function Home() {
         {/* Section 6 — For Landlords */}
         <section className="bg-[#1A2B40]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+            <p className="text-xs font-bold uppercase tracking-wide text-white mb-2">
+              For Landlords
+            </p>
             <h2 className="text-3xl font-bold text-white mb-12">Grow Your Rental Business</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12">
               {LANDLORD_FEATURES.map((feature) => {
@@ -273,8 +428,11 @@ export default function Home() {
         </section>
 
         {/* Section 7 — Testimonials */}
-        <section className="bg-white">
+        <section id="testimonials" className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand-teal text-center mb-2">
+              Testimonials
+            </p>
             <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
               What Our Users Say
             </h2>
@@ -297,8 +455,17 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="text-gray-700 mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
-                  <p className="font-bold text-gray-900">{testimonial.name}</p>
-                  <p className="text-sm text-brand-teal font-semibold">{testimonial.role}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-brand-teal text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      {testimonial.initials}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">{testimonial.name}</p>
+                      <p className="text-sm text-brand-teal font-semibold">
+                        {testimonial.role} · {testimonial.location}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

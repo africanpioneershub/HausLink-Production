@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
+import { sendWelcomeEmail } from '@/lib/email/templates';
+import { sendWhatsAppWelcome } from '@/lib/whatsapp/templates';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(150),
@@ -85,6 +87,13 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  sendWelcomeEmail({ name, email, role, phone: fullPhone }).catch((error) =>
+    console.error('[register] Welcome email failed', error)
+  );
+  sendWhatsAppWelcome({ phone: fullWhatsapp, name, role }).catch((error) =>
+    console.error('[register] Welcome WhatsApp failed', error)
+  );
 
   return NextResponse.json(
     { success: true, data: { id: created.user.id, email, role } },

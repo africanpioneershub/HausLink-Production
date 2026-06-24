@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
 import { AUDIT_ACTIONS } from '@/lib/constants';
+import { sendKYCRejectedEmail } from '@/lib/email/templates';
+import { sendWhatsAppKYCRejected } from '@/lib/whatsapp/templates';
 
 export const POST = withAuth(['ADMIN'])(
   async (request, context, admin) => {
@@ -51,6 +53,23 @@ export const POST = withAuth(['ADMIN'])(
       ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
       metadata: reason ? { reason } : undefined,
     });
+
+    const rejectionReason = reason ?? 'Documents could not be verified';
+
+    if (targetUser.name) {
+      sendKYCRejectedEmail({
+        name: targetUser.name,
+        email: targetUser.email,
+        reason: rejectionReason,
+      }).catch((error) => console.error('[kyc reject] Email failed', error));
+    }
+    if (targetUser.phone) {
+      sendWhatsAppKYCRejected({
+        phone: targetUser.phone,
+        name: targetUser.name ?? 'there',
+        reason: rejectionReason,
+      }).catch((error) => console.error('[kyc reject] WhatsApp failed', error));
+    }
 
     return NextResponse.json({
       success: true,

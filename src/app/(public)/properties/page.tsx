@@ -1,32 +1,69 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { PropertyCard } from '@/components/public/PropertyCard';
-import { CATALOG_PROPERTIES } from '@/lib/public/mock-properties';
+import { useEffect, useState } from 'react';
+import { PropertyCard, type PropertyCardData } from '@/components/public/PropertyCard';
 
 const PAGE_SIZE = 6;
+
+interface PublicPropertyApiItem {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  district: string;
+  city: string;
+  bedrooms: number;
+  bathrooms: number;
+  rent_rwf: number;
+  view_count: number;
+  is_verified: boolean;
+  featured: boolean;
+  imageUrl: string | null;
+}
+
+function toCardData(item: PublicPropertyApiItem): PropertyCardData {
+  return {
+    id: item.id,
+    title: item.title,
+    district: item.district,
+    price: item.rent_rwf,
+    beds: item.bedrooms,
+    baths: item.bathrooms,
+    type: item.type,
+    rating: 0,
+    views: item.view_count,
+    verified: item.is_verified,
+    premium: item.featured,
+    featured: item.featured,
+    description: item.description ?? '',
+    imageUrl: item.imageUrl,
+  };
+}
 
 export default function PublicPropertiesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [properties, setProperties] = useState<PropertyCardData[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return CATALOG_PROPERTIES;
-    return CATALOG_PROPERTIES.filter(
-      (property) =>
-        property.title.toLowerCase().includes(query) ||
-        property.district.toLowerCase().includes(query) ||
-        property.type.toLowerCase().includes(query)
-    );
-  }, [search]);
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (search.trim()) params.set('search', search.trim());
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
+    fetch(`/api/public/properties?${params.toString()}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setProperties(json.data.data.map(toCardData));
+          setTotal(json.data.total);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [search, page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="bg-white">
@@ -36,9 +73,7 @@ export default function PublicPropertiesPage() {
         </p>
         <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Available Rental Properties</h1>
-          <p className="text-gray-500 text-sm">
-            ({filtered.length} of {CATALOG_PROPERTIES.length} Listings)
-          </p>
+          <p className="text-gray-500 text-sm">({total} Listings)</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-3 mb-10">
@@ -71,17 +106,23 @@ export default function PublicPropertiesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {paginated.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
+        {loading ? (
+          <p className="text-sm text-gray-500 mb-12">Loading properties…</p>
+        ) : properties.length === 0 ? (
+          <p className="text-sm text-gray-500 mb-12">No properties found.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {properties.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </div>
+        )}
 
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={page === 1}
               className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-700 disabled:opacity-40 hover:border-brand-teal hover:text-brand-teal transition-colors"
             >
               Previous
@@ -91,7 +132,7 @@ export default function PublicPropertiesPage() {
                 key={i}
                 onClick={() => setPage(i + 1)}
                 className={`w-9 h-9 text-sm font-semibold rounded-lg border transition-colors ${
-                  currentPage === i + 1
+                  page === i + 1
                     ? 'bg-brand-teal text-white border-brand-teal'
                     : 'border-gray-200 text-gray-700 hover:border-brand-teal hover:text-brand-teal'
                 }`}
@@ -101,7 +142,7 @@ export default function PublicPropertiesPage() {
             ))}
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={page === totalPages}
               className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-700 disabled:opacity-40 hover:border-brand-teal hover:text-brand-teal transition-colors"
             >
               Next

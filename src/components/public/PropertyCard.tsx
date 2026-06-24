@@ -1,20 +1,41 @@
 import Link from 'next/link';
 import { BedDouble, Bath, Building2, Star, Eye, ImageOff, ArrowRight } from 'lucide-react';
-import type { MockProperty } from '@/lib/public/mock-properties';
+
+export interface PropertyCardData {
+  id: string;
+  title: string;
+  district: string;
+  price: number;
+  beds: number;
+  baths: number;
+  type: string;
+  rating: number;
+  views: number;
+  verified: boolean;
+  premium: boolean;
+  featured: boolean;
+  description: string;
+  imageUrl?: string | null;
+}
 
 function formatRwf(amount: number) {
   return `RWF ${amount.toLocaleString('en-US')}`;
 }
 
-export function PropertyCard({ property }: { property: MockProperty }) {
+export function PropertyCard({ property }: { property: PropertyCardData }) {
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden flex flex-col">
       <div
         role="img"
-        aria-label={`No photo available for ${property.title}`}
-        className="relative h-[200px] bg-gray-200 flex items-center justify-center"
+        aria-label={property.imageUrl ? property.title : `No photo available for ${property.title}`}
+        className="relative h-[200px] bg-gray-200 flex items-center justify-center overflow-hidden"
       >
-        <ImageOff className="w-10 h-10 text-gray-400" />
+        {property.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={property.imageUrl} alt={property.title} className="w-full h-full object-cover" />
+        ) : (
+          <ImageOff className="w-10 h-10 text-gray-400" />
+        )}
 
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
           {property.verified && (

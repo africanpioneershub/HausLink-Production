@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'HausLink — Property Management Platform',
+  title: 'HausLink — Find & Manage Rental Properties in Rwanda',
   description: 'Rwanda\'s all-in-one property management platform for tenants and landlords.',
 };
 

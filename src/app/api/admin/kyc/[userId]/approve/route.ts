@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
 import { AUDIT_ACTIONS } from '@/lib/constants';
+import { sendKYCApprovedEmail } from '@/lib/email/templates';
+import { sendWhatsAppKYCApproved } from '@/lib/whatsapp/templates';
 
 export const POST = withAuth(['ADMIN'])(
   async (request, context, admin) => {
@@ -47,6 +49,17 @@ export const POST = withAuth(['ADMIN'])(
       adminId: admin.id,
       ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
     });
+
+    if (targetUser.name) {
+      sendKYCApprovedEmail({ name: targetUser.name, email: targetUser.email }).catch((error) =>
+        console.error('[kyc approve] Email failed', error)
+      );
+    }
+    if (targetUser.phone) {
+      sendWhatsAppKYCApproved({ phone: targetUser.phone, name: targetUser.name ?? 'there' }).catch(
+        (error) => console.error('[kyc approve] WhatsApp failed', error)
+      );
+    }
 
     return NextResponse.json({
       success: true,
