@@ -187,7 +187,8 @@ export default function Home() {
       .then((res) => res.json())
       .then((json) => {
         if (json.success) setFeaturedProperties(json.data.data.map(toCardData));
-      });
+      })
+      .catch(() => {});
 
     fetch('/api/public/properties?pageSize=6')
       .then((res) => res.json())
@@ -196,7 +197,8 @@ export default function Home() {
           setCatalogProperties(json.data.data.map(toCardData));
           setCatalogTotal(json.data.total);
         }
-      });
+      })
+      .catch(() => {});
 
     fetch('/api/public/stats')
       .then((res) => res.json())
@@ -209,7 +211,8 @@ export default function Home() {
             { value: `${json.data.districtsCovered}`, label: 'Districts Covered' },
           ]);
         }
-      });
+      })
+      .catch(() => {});
   }, []);
 
   return (

@@ -60,6 +60,7 @@ export default function PublicPropertiesPage() {
           setTotal(json.data.total);
         }
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [search, page]);
 

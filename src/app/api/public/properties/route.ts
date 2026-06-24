@@ -20,12 +20,17 @@ export async function GET(request: Request) {
   const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get('pageSize') ?? String(DEFAULT_PAGE_SIZE))));
 
   const cacheKey = `public:properties:${search ?? ''}:${type ?? ''}:${district ?? ''}:${minPrice ?? ''}:${maxPrice ?? ''}:${featured ?? ''}:${page}:${pageSize}`;
+  const fallback = { data: [], total: 0, page, pageSize };
 
-  const cached = await getCache<{ data: unknown[]; total: number; page: number; pageSize: number }>(
-    cacheKey
-  );
-  if (cached) {
-    return NextResponse.json({ success: true, data: cached });
+  try {
+    const cached = await getCache<{ data: unknown[]; total: number; page: number; pageSize: number }>(
+      cacheKey
+    );
+    if (cached) {
+      return NextResponse.json({ success: true, data: cached });
+    }
+  } catch (error) {
+    console.error('[public/properties] Cache read failed', error);
   }
 
   const where: Prisma.PropertyWhereInput = { status: 'ACTIVE' };
@@ -40,36 +45,46 @@ export async function GET(request: Request) {
   }
   if (featured === 'true') where.featured = true;
 
-  const [properties, total] = await Promise.all([
-    prisma.property.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: { images: { where: { is_primary: true }, take: 1 } },
-    }),
-    prisma.property.count({ where }),
-  ]);
+  let result;
+  try {
+    const [properties, total] = await Promise.all([
+      prisma.property.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { images: { where: { is_primary: true }, take: 1 } },
+      }),
+      prisma.property.count({ where }),
+    ]);
 
-  const data = properties.map((property) => ({
-    id: property.id,
-    title: property.title,
-    description: property.description,
-    type: property.type,
-    district: property.district,
-    city: property.city,
-    bedrooms: property.bedrooms,
-    bathrooms: property.bathrooms,
-    rent_rwf: property.rent_rwf,
-    view_count: property.view_count,
-    is_verified: property.is_verified,
-    featured: property.featured,
-    imageUrl: property.images[0]?.cdn_url ?? property.images[0]?.storage_path ?? null,
-  }));
+    const data = properties.map((property) => ({
+      id: property.id,
+      title: property.title,
+      description: property.description,
+      type: property.type,
+      district: property.district,
+      city: property.city,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      rent_rwf: property.rent_rwf,
+      view_count: property.view_count,
+      is_verified: property.is_verified,
+      featured: property.featured,
+      imageUrl: property.images[0]?.cdn_url ?? property.images[0]?.storage_path ?? null,
+    }));
 
-  const result = { data, total, page, pageSize };
+    result = { data, total, page, pageSize };
+  } catch (error) {
+    console.error('[public/properties] Database query failed, returning empty result', error);
+    return NextResponse.json({ success: true, data: fallback });
+  }
 
-  await setCache(cacheKey, result, CACHE_TTL.PROPERTY_LIST);
+  try {
+    await setCache(cacheKey, result, CACHE_TTL.PROPERTY_LIST);
+  } catch (error) {
+    console.error('[public/properties] Cache write failed', error);
+  }
 
   return NextResponse.json({ success: true, data: result });
 }
