@@ -1,4 +1,5 @@
 import { Ban, CheckCircle2, Download, Home, XCircle } from 'lucide-react';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma/client';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, daysRemaining, formatDate, formatRwf } from '@/lib/utils';
@@ -11,15 +12,29 @@ const STATUS_BADGE: Record<string, string> = {
   TERMINATED: 'bg-gray-100 text-gray-700',
 };
 
+type TenancyWithRelations = Prisma.TenancyGetPayload<{
+  include: {
+    tenant: { select: { id: true; name: true; email: true } };
+    landlord: { select: { id: true; name: true; email: true } };
+    property: { select: { id: true; title: true } };
+  };
+}>;
+
 export default async function AdminTenanciesPage() {
-  const tenancies = await prisma.tenancy.findMany({
-    orderBy: { created_at: 'desc' },
-    include: {
-      tenant: { select: { id: true, name: true, email: true } },
-      landlord: { select: { id: true, name: true, email: true } },
-      property: { select: { id: true, title: true } },
-    },
-  });
+  let tenancies: TenancyWithRelations[] = [];
+
+  try {
+    tenancies = await prisma.tenancy.findMany({
+      orderBy: { created_at: 'desc' },
+      include: {
+        tenant: { select: { id: true, name: true, email: true } },
+        landlord: { select: { id: true, name: true, email: true } },
+        property: { select: { id: true, title: true } },
+      },
+    });
+  } catch (error) {
+    console.error('[admin/tenancies] DB error:', error);
+  }
 
   const derived = tenancies.map((t) => {
     const daysLeft = daysRemaining(t.end_date);

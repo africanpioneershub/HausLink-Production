@@ -1,19 +1,43 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma, type PlatformConfig } from '@prisma/client';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
 import { AUDIT_ACTIONS } from '@/lib/constants';
 
+const FALLBACK_CONFIG: PlatformConfig = {
+  id: 'singleton',
+  platform_name: 'HausLink',
+  support_email: 'support@hauslink.rw',
+  support_whatsapp: '+250788000000',
+  is_live: false,
+  allow_registrations: true,
+  require_listing_approval: true,
+  tenant_monthly_rwf: 5000,
+  landlord_registration_rwf: 10000,
+  transaction_fee_pct: new Prisma.Decimal(0.02),
+  featured_listing_monthly_rwf: 25000,
+  featured_listing_weekly_rwf: 10000,
+  notification_settings: {},
+  security_settings: {},
+  updated_at: new Date(),
+};
+
 export const GET = withAuth(['ADMIN'])(
   async () => {
-    const config = await prisma.platformConfig.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton' },
-      update: {},
-    });
+    let config: PlatformConfig = FALLBACK_CONFIG;
+
+    try {
+      config = await prisma.platformConfig.upsert({
+        where: { id: 'singleton' },
+        create: { id: 'singleton' },
+        update: {},
+      });
+    } catch (error) {
+      console.error('[admin/settings] DB error:', error);
+    }
 
     return NextResponse.json({ success: true, data: config });
   }
@@ -54,11 +78,20 @@ export const PATCH = withAuth(['ADMIN'])(
       ...(security_settings ? { security_settings: security_settings as Prisma.InputJsonValue } : {}),
     };
 
-    const updated = await prisma.platformConfig.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...rest, ...jsonFields },
-      update: { ...rest, ...jsonFields },
-    });
+    let updated: PlatformConfig;
+    try {
+      updated = await prisma.platformConfig.upsert({
+        where: { id: 'singleton' },
+        create: { id: 'singleton', ...rest, ...jsonFields },
+        update: { ...rest, ...jsonFields },
+      });
+    } catch (error) {
+      console.error('[admin/settings] PATCH DB error:', error);
+      return NextResponse.json(
+        { success: false, error: 'Database temporarily unavailable. Please try again.', code: 'DB_UNAVAILABLE' },
+        { status: 503 }
+      );
+    }
 
     await deleteCache(CACHE_KEYS.platformConfig());
 

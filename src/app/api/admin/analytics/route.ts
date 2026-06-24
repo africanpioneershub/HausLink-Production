@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { AuditLog } from '@prisma/client';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
 
@@ -36,51 +37,71 @@ export const GET = withAuth(['ADMIN'])(
     const twelveWeeksAgo = new Date(now.getTime() - 12 * 7 * 24 * 60 * 60 * 1000);
     const weekCutoffKey = twelveWeeksAgo.getFullYear() * 53 + getIsoWeek(twelveWeeksAgo);
 
-    const [revenueRows, userGrowthRows, propertyDemandRows, recentActivity] = await Promise.all([
-      prisma.$queryRaw<RevenueRow[]>`
-        SELECT year, month, SUM(total_rwf)::float AS revenue, SUM(transaction_count)::int AS transactions
-        FROM mv_platform_revenue_monthly
-        WHERE (year * 12 + month) >= ${revenueCutoffKey}
-        GROUP BY year, month
-        ORDER BY year, month
-      `,
-      prisma.$queryRaw<UserGrowthRow[]>`
-        SELECT year, week, role, SUM(new_users)::int AS new_users
-        FROM mv_user_growth_weekly
-        WHERE (year * 53 + week) >= ${weekCutoffKey}
-        GROUP BY year, week, role
-        ORDER BY year, week
-      `,
-      prisma.$queryRaw<PropertyDemandRow[]>`
-        SELECT city,
-          SUM(active_listings)::int AS active_listings,
-          SUM(occupied_listings)::int AS occupied_listings,
-          SUM(application_count)::int AS application_count
-        FROM mv_property_demand_by_city
-        GROUP BY city
-        ORDER BY application_count DESC
-      `,
-      prisma.auditLog.findMany({ orderBy: { created_at: 'desc' }, take: 20 }),
-    ]);
+    let revenueRows: RevenueRow[] = [];
+    let userGrowthRows: UserGrowthRow[] = [];
+    let propertyDemandRows: PropertyDemandRow[] = [];
+    let recentActivity: AuditLog[] = [];
+    let subscriptionPayments: { type: string; paid_at: Date | null }[] = [];
+    let maintenanceRequests: { created_at: Date; resolved_at: Date | null }[] = [];
+    let processedApplications: { applied_at: Date }[] = [];
 
-    const [subscriptionPayments, maintenanceRequests, processedApplications] = await Promise.all([
-      prisma.payment.findMany({
-        where: {
-          status: 'COMPLETED',
-          paid_at: { gte: sixMonthsAgo },
-          type: { in: ['SUBSCRIPTION', 'REGISTRATION', 'FEATURED_LISTING'] },
-        },
-        select: { type: true, paid_at: true },
-      }),
-      prisma.maintenanceRequest.findMany({
-        where: { created_at: { gte: sixMonthsAgo } },
-        select: { created_at: true, resolved_at: true },
-      }),
-      prisma.application.findMany({
-        where: { applied_at: { gte: sixMonthsAgo }, status: { in: ['APPROVED', 'REJECTED'] } },
-        select: { applied_at: true },
-      }),
-    ]);
+    try {
+      const [revenue, userGrowth, propertyDemand, activity] = await Promise.all([
+        prisma.$queryRaw<RevenueRow[]>`
+          SELECT year, month, SUM(total_rwf)::float AS revenue, SUM(transaction_count)::int AS transactions
+          FROM mv_platform_revenue_monthly
+          WHERE (year * 12 + month) >= ${revenueCutoffKey}
+          GROUP BY year, month
+          ORDER BY year, month
+        `,
+        prisma.$queryRaw<UserGrowthRow[]>`
+          SELECT year, week, role, SUM(new_users)::int AS new_users
+          FROM mv_user_growth_weekly
+          WHERE (year * 53 + week) >= ${weekCutoffKey}
+          GROUP BY year, week, role
+          ORDER BY year, week
+        `,
+        prisma.$queryRaw<PropertyDemandRow[]>`
+          SELECT city,
+            SUM(active_listings)::int AS active_listings,
+            SUM(occupied_listings)::int AS occupied_listings,
+            SUM(application_count)::int AS application_count
+          FROM mv_property_demand_by_city
+          GROUP BY city
+          ORDER BY application_count DESC
+        `,
+        prisma.auditLog.findMany({ orderBy: { created_at: 'desc' }, take: 20 }),
+      ]);
+
+      const [subPayments, maintenance, applications] = await Promise.all([
+        prisma.payment.findMany({
+          where: {
+            status: 'COMPLETED',
+            paid_at: { gte: sixMonthsAgo },
+            type: { in: ['SUBSCRIPTION', 'REGISTRATION', 'FEATURED_LISTING'] },
+          },
+          select: { type: true, paid_at: true },
+        }),
+        prisma.maintenanceRequest.findMany({
+          where: { created_at: { gte: sixMonthsAgo } },
+          select: { created_at: true, resolved_at: true },
+        }),
+        prisma.application.findMany({
+          where: { applied_at: { gte: sixMonthsAgo }, status: { in: ['APPROVED', 'REJECTED'] } },
+          select: { applied_at: true },
+        }),
+      ]);
+
+      revenueRows = revenue;
+      userGrowthRows = userGrowth;
+      propertyDemandRows = propertyDemand;
+      recentActivity = activity;
+      subscriptionPayments = subPayments;
+      maintenanceRequests = maintenance;
+      processedApplications = applications;
+    } catch (error) {
+      console.error('[admin/analytics] DB error:', error);
+    }
 
     const monthKeys: string[] = [];
     for (let i = 0; i < 6; i++) {

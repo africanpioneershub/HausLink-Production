@@ -7,6 +7,7 @@ import {
   Wallet,
   XCircle,
 } from 'lucide-react';
+import type { Prisma } from '@prisma/client';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma/client';
 import { KpiCard } from '@/components/shared/KpiCard';
@@ -21,28 +22,49 @@ const STATUS_BADGE: Record<string, string> = {
   TERMINATED: 'bg-gray-100 text-gray-700',
 };
 
+type TenancyWithRelations = Prisma.TenancyGetPayload<{
+  include: {
+    tenant: { select: { id: true; name: true; email: true } };
+    property: { select: { id: true; title: true } };
+  };
+}>;
+
 export default async function LandlordTenanciesPage() {
   const supabase = createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;
 
-  const [tenancies, totalProperties, occupiedProperties, collectedAggregate] = await Promise.all([
-    prisma.tenancy.findMany({
-      where: { landlord_id: user.id },
-      orderBy: { created_at: 'desc' },
-      include: {
-        tenant: { select: { id: true, name: true, email: true } },
-        property: { select: { id: true, title: true } },
-      },
-    }),
-    prisma.property.count({ where: { landlord_id: user.id } }),
-    prisma.property.count({ where: { landlord_id: user.id, status: 'OCCUPIED' } }),
-    prisma.payment.aggregate({
-      where: { landlord_id: user.id, status: 'COMPLETED' },
-      _sum: { amount_rwf: true },
-    }),
-  ]);
+  let tenancies: TenancyWithRelations[] = [];
+  let totalProperties = 0;
+  let occupiedProperties = 0;
+  let totalCollected = 0;
+
+  try {
+    const [tenancyRows, propertyCount, occupiedCount, collectedAggregate] = await Promise.all([
+      prisma.tenancy.findMany({
+        where: { landlord_id: user.id },
+        orderBy: { created_at: 'desc' },
+        include: {
+          tenant: { select: { id: true, name: true, email: true } },
+          property: { select: { id: true, title: true } },
+        },
+      }),
+      prisma.property.count({ where: { landlord_id: user.id } }),
+      prisma.property.count({ where: { landlord_id: user.id, status: 'OCCUPIED' } }),
+      prisma.payment.aggregate({
+        where: { landlord_id: user.id, status: 'COMPLETED' },
+        _sum: { amount_rwf: true },
+      }),
+    ]);
+
+    tenancies = tenancyRows;
+    totalProperties = propertyCount;
+    occupiedProperties = occupiedCount;
+    totalCollected = collectedAggregate._sum.amount_rwf ?? 0;
+  } catch (error) {
+    console.error('[landlord/tenancies] DB error:', error);
+  }
 
   const derived = tenancies.map((t) => {
     let status: 'ACTIVE' | 'ENDING_SOON' | 'EXPIRED' | 'TERMINATED' = 'ACTIVE';
@@ -61,7 +83,7 @@ export default async function LandlordTenanciesPage() {
     endingSoon: derived.filter((t) => t.status === 'ENDING_SOON').length,
     expired: derived.filter((t) => t.status === 'EXPIRED').length,
     terminated: derived.filter((t) => t.status === 'TERMINATED').length,
-    totalCollected: collectedAggregate._sum.amount_rwf ?? 0,
+    totalCollected,
     totalProperties,
     occupancyRate:
       totalProperties > 0 ? Math.round((occupiedProperties / totalProperties) * 100) : 0,
