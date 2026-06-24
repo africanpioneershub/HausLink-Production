@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Check, Home, Building2, Upload, FileText, X } from 'lucide-react';
+import { Eye, EyeOff, Check, Home, Building2, Upload, FileText, X, Mail } from 'lucide-react';
 import { CountrySelect } from '@/components/auth/CountrySelect';
 import { DEFAULT_COUNTRY, type Country } from '@/lib/countries';
 import { RWANDA_DISTRICTS } from '@/lib/rwanda-districts';
@@ -69,6 +69,8 @@ function RegisterForm() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   useEffect(() => {
     const roleParam = searchParams.get('role');
@@ -173,29 +175,6 @@ function RegisterForm() {
         return;
       }
 
-      const supabase = createBrowserSupabaseClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
-      if (signInError) {
-        setError('Account created, but document upload failed. Please log in and resubmit your documents.');
-        setSubmitting(false);
-        return;
-      }
-
-      const kycForm = new FormData();
-      kycForm.append('documentType', form.documentType);
-      kycForm.append('file', form.file as File);
-
-      const kycRes = await fetch('/api/kyc/submit', { method: 'POST', body: kycForm });
-      const kycData = await kycRes.json();
-      if (!kycRes.ok || !kycData.success) {
-        setError(kycData.error ?? 'Account created, but document upload failed. Please contact support.');
-        setSubmitting(false);
-        return;
-      }
-
       setSuccess(true);
     } catch {
       setError('Something went wrong. Please try again.');
@@ -204,18 +183,28 @@ function RegisterForm() {
     }
   }
 
+  async function handleResend() {
+    setResending(true);
+    setResent(false);
+    const supabase = createBrowserSupabaseClient();
+    await supabase.auth.resend({ type: 'signup', email: form.email });
+    setResending(false);
+    setResent(true);
+  }
+
   if (success) {
     return (
       <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
           <div className="mx-auto w-14 h-14 rounded-full bg-brand-teal/10 flex items-center justify-center mb-4">
-            <Check className="w-7 h-7 text-brand-teal" />
+            <Mail className="w-7 h-7 text-brand-teal" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Account Created Successfully!</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Check Your Email!</h1>
           <p className="text-gray-600 mb-6">
-            {form.role === 'TENANT'
-              ? 'Welcome to HausLink! Your account is pending review. You will receive an email once approved.'
-              : 'Thank you for registering as a landlord. Our team will review your documents and activate your account within 24-48 hours.'}
+            We sent a verification link to{' '}
+            <span className="font-medium text-gray-900">{form.email}</span>. Click the link to
+            verify your account, then our team will review your documents{' '}
+            {form.role === 'LANDLORD' ? 'and activate your account ' : ''}within 24-48 hours.
           </p>
           <button
             onClick={() => router.push('/login')}
@@ -223,6 +212,17 @@ function RegisterForm() {
           >
             Go to Login
           </button>
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="w-full mt-3 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
+          >
+            {resending ? 'Resending…' : 'Resend verification email'}
+          </button>
+          {resent && (
+            <p className="mt-3 text-sm text-green-600">Email resent! Check your inbox.</p>
+          )}
         </div>
       </main>
     );

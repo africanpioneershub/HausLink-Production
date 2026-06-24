@@ -21,10 +21,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
+    setResent(false);
     setLoading(true);
 
     const supabase = createBrowserSupabaseClient();
@@ -34,7 +39,12 @@ export default function LoginPage() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      if (signInError.message.toLowerCase().includes('email not confirmed')) {
+        setNeedsVerification(true);
+        setError('Please check your email and click the verification link before logging in.');
+      } else {
+        setError(signInError.message);
+      }
       setLoading(false);
       return;
     }
@@ -42,6 +52,15 @@ export default function LoginPage() {
     const role = data.user?.user_metadata?.role as UserRole | undefined;
     const destination = role ? ROLE_REDIRECTS[role] : '/';
     router.push(destination);
+  }
+
+  async function handleResend() {
+    setResending(true);
+    setResent(false);
+    const supabase = createBrowserSupabaseClient();
+    await supabase.auth.resend({ type: 'signup', email });
+    setResending(false);
+    setResent(true);
   }
 
   return (
@@ -102,7 +121,24 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
 
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+          {error && (
+            <div className="text-center">
+              <p className="text-sm text-red-600">{error}</p>
+              {needsVerification && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="mt-2 text-sm font-medium text-brand-teal hover:underline disabled:opacity-60"
+                >
+                  {resending ? 'Resending…' : 'Resend verification email'}
+                </button>
+              )}
+              {resent && (
+                <p className="mt-2 text-sm text-green-600">Email resent! Check your inbox.</p>
+              )}
+            </div>
+          )}
         </form>
 
         <div className="mt-6 flex flex-col items-center gap-2 text-sm">
