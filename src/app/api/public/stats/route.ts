@@ -11,7 +11,7 @@ const FALLBACK_STATS = {
   activeListings: 0,
   verifiedLandlords: 0,
   happyTenants: 0,
-  districtsCovered: 0,
+  districtsCovered: 30,
 };
 
 export async function GET() {
@@ -26,22 +26,18 @@ export async function GET() {
 
   let data: typeof FALLBACK_STATS;
   try {
-    const [activeListings, verifiedLandlords, happyTenants, districts] = await Promise.all([
+    const [activeListings, verifiedLandlords, happyTenants] = await Promise.all([
       prisma.property.count({ where: { status: 'ACTIVE' } }),
       prisma.user.count({ where: { role: 'LANDLORD', kyc_status: 'APPROVED' } }),
       prisma.user.count({ where: { role: 'TENANT', status: 'ACTIVE' } }),
-      prisma.property.findMany({
-        where: { status: 'ACTIVE' },
-        select: { district: true },
-        distinct: ['district'],
-      }),
     ]);
 
     data = {
       activeListings,
       verifiedLandlords,
       happyTenants,
-      districtsCovered: districts.length,
+      // HausLink covers all 30 districts of Rwanda regardless of current listing density.
+      districtsCovered: 30,
     };
   } catch (error) {
     console.error('[public/stats] Database query failed, returning fallback stats', error);

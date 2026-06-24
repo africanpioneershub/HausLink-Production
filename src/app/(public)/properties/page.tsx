@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { PropertyCard, type PropertyCardData } from '@/components/public/PropertyCard';
+import { RWANDA_DISTRICTS } from '@/lib/rwanda-districts';
 
 const PAGE_SIZE = 6;
 
@@ -48,24 +49,6 @@ const PROPERTY_TYPES = [
   { value: 'VILLA', label: 'Villa' },
   { value: 'STUDIO', label: 'Studio' },
   { value: 'OFFICE', label: 'Office' },
-];
-
-const DISTRICTS = [
-  'Gasabo',
-  'Kicukiro',
-  'Nyarugenge',
-  'Kimihurura',
-  'Gisozi',
-  'Kacyiru',
-  'Kibagabaga',
-  'Kanombe',
-  'Remera',
-  'Gikondo',
-  'Nyarutarama',
-  'Kagugu',
-  'Butamwa',
-  'Batsinda',
-  'Nyamirambo',
 ];
 
 const BEDROOM_OPTIONS = ['Any', '1', '2', '3', '4+'];
@@ -198,7 +181,7 @@ export default function PublicPropertiesPage() {
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
               >
                 <option value="">All Districts</option>
-                {DISTRICTS.map((district) => (
+                {RWANDA_DISTRICTS.map((district) => (
                   <option key={district} value={district}>
                     {district}
                   </option>

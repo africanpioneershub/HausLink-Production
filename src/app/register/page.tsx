@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check, Home, Building2, Upload, FileText, X } from 'lucide-react';
 import { CountrySelect } from '@/components/auth/CountrySelect';
 import { DEFAULT_COUNTRY, type Country } from '@/lib/countries';
+import { RWANDA_DISTRICTS } from '@/lib/rwanda-districts';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { UserRole } from '@/types';
 
@@ -24,7 +25,6 @@ interface FormState {
   whatsappSame: boolean;
   whatsappCountry: Country;
   whatsapp: string;
-  city: string;
   district: string;
   documentType: DocumentType;
   file: File | null;
@@ -42,7 +42,6 @@ const INITIAL_STATE: FormState = {
   whatsappSame: true,
   whatsappCountry: DEFAULT_COUNTRY,
   whatsapp: '',
-  city: '',
   district: '',
   documentType: 'NATIONAL_ID',
   file: null,
@@ -95,7 +94,6 @@ function RegisterForm() {
     if (!form.whatsappSame && !/^\d+$/.test(form.whatsapp)) {
       return 'WhatsApp number must contain digits only';
     }
-    if (!form.city.trim()) return 'City is required';
     if (!form.district.trim()) return 'District is required';
     return null;
   }
@@ -160,7 +158,6 @@ function RegisterForm() {
           role: form.role,
           phone: form.phone,
           whatsapp,
-          city: form.city,
           district: form.district,
           countryCode: form.phoneCountry.dial,
           whatsappCountryCode: whatsappCountry.dial,
@@ -518,31 +515,24 @@ function StepTwo({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1.5">
-            City
-          </label>
-          <input
-            id="city"
-            value={form.city}
-            onChange={(e) => update('city', e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
-            placeholder="Kigali"
-          />
-        </div>
-        <div>
-          <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1.5">
-            District
-          </label>
-          <input
-            id="district"
-            value={form.district}
-            onChange={(e) => update('district', e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
-            placeholder="Gasabo"
-          />
-        </div>
+      <div>
+        <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1.5">
+          District
+        </label>
+        <select
+          id="district"
+          value={form.district}
+          onChange={(e) => update('district', e.target.value)}
+          required
+          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-teal bg-white"
+        >
+          <option value="">Select your district</option>
+          {RWANDA_DISTRICTS.map((district) => (
+            <option key={district} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

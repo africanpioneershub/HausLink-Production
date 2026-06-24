@@ -106,10 +106,10 @@ export default function Home() {
   const [catalogProperties, setCatalogProperties] = useState<PropertyCardData[]>([]);
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [stats, setStats] = useState([
-    { value: '0', label: 'Active Listings' },
-    { value: '0', label: 'Verified Landlords' },
-    { value: '0', label: 'Happy Tenants' },
-    { value: '0', label: 'Districts Covered' },
+    { value: '0+', label: 'Active Listings' },
+    { value: '0+', label: 'Verified Landlords' },
+    { value: '0+', label: 'Happy Tenants' },
+    { value: '30', label: 'Districts Covered' },
   ]);
 
   useEffect(() => {
