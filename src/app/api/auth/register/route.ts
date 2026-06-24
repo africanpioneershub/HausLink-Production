@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { sendWelcomeEmail } from '@/lib/email/templates';
 import { sendWhatsAppWelcome } from '@/lib/whatsapp/templates';
+import { authRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(150),
@@ -19,6 +20,15 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const { success: withinLimit } = await applyRateLimit(authRateLimit, `register:${ip}`);
+  if (!withinLimit) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' },
+      { status: 429 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
@@ -42,27 +52,45 @@ export async function POST(request: Request) {
   const fullPhone = `${countryCode}${phone}`;
   const fullWhatsapp = `${whatsappCountryCode}${whatsapp}`;
 
-  const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      name,
-      role,
-      status: 'PENDING',
-      kyc_status: 'NOT_SUBMITTED',
-      registration_paid: false,
-      phone: fullPhone,
-      whatsapp: fullWhatsapp,
-      city,
-      district,
-    },
-  });
+  let created;
+  try {
+    const result = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        name,
+        role,
+        status: 'PENDING',
+        kyc_status: 'NOT_SUBMITTED',
+        registration_paid: false,
+        phone: fullPhone,
+        whatsapp: fullWhatsapp,
+        city,
+        district,
+      },
+    });
 
-  if (createError || !created.user) {
+    if (result.error || !result.data.user) {
+      console.error('[register] supabaseAdmin.auth.admin.createUser returned an error', {
+        email,
+        error: result.error,
+      });
+      return NextResponse.json(
+        { success: false, error: result.error?.message ?? 'Failed to create account', code: 'AUTH_ERROR' },
+        { status: 400 }
+      );
+    }
+
+    created = result.data;
+  } catch (authError) {
+    console.error('[register] supabaseAdmin.auth.admin.createUser threw an exception', {
+      email,
+      error: authError,
+    });
     return NextResponse.json(
-      { success: false, error: createError?.message ?? 'Failed to create account', code: 'AUTH_ERROR' },
-      { status: 400 }
+      { success: false, error: 'Failed to reach the authentication service. Please try again.', code: 'AUTH_UNREACHABLE' },
+      { status: 502 }
     );
   }
 
@@ -81,7 +109,19 @@ export async function POST(request: Request) {
       },
     });
   } catch (dbError) {
-    await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+    console.error('[register] Failed to create Prisma user record, rolling back auth user', {
+      email,
+      userId: created.user.id,
+      error: dbError,
+    });
+    try {
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+    } catch (rollbackError) {
+      console.error('[register] Failed to roll back auth user after DB error', {
+        userId: created.user.id,
+        error: rollbackError,
+      });
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to create account', code: 'DB_ERROR' },
       { status: 500 }

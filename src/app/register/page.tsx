@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check, Home, Building2, Upload, FileText, X } from 'lucide-react';
 import { CountrySelect } from '@/components/auth/CountrySelect';
 import { DEFAULT_COUNTRY, type Country } from '@/lib/countries';
+import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { UserRole } from '@/types';
 
 type Role = Extract<UserRole, 'TENANT' | 'LANDLORD'>;
@@ -171,10 +172,18 @@ function RegisterForm() {
         return;
       }
 
-      const userId = registerData.data.id as string;
+      const supabase = createBrowserSupabaseClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+      if (signInError) {
+        setError('Account created, but document upload failed. Please log in and resubmit your documents.');
+        setSubmitting(false);
+        return;
+      }
 
       const kycForm = new FormData();
-      kycForm.append('userId', userId);
       kycForm.append('documentType', form.documentType);
       kycForm.append('file', form.file as File);
 

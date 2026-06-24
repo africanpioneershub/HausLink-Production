@@ -1,11 +1,43 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { PLATFORM_FEE_PCT } from '@/lib/constants';
 import { sendRentPaidEmail } from '@/lib/email/templates';
 import { sendWhatsAppRentPaid } from '@/lib/whatsapp/templates';
 
+function isValidAirtelSignature(rawBody: string, signature: string | null): boolean {
+  const secret = process.env.AIRTEL_WEBHOOK_SECRET;
+  if (!secret) {
+    // Fail closed: without a configured secret, no callback can be trusted.
+    return false;
+  }
+  if (!signature) return false;
+
+  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  const signatureBuf = Buffer.from(signature, 'utf8');
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return timingSafeEqual(expectedBuf, signatureBuf);
+}
+
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const rawBody = await request.text();
+  const signature = request.headers.get('x-airtel-signature');
+
+  if (!isValidAirtelSignature(rawBody, signature)) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid signature', code: 'UNAUTHORIZED' },
+      { status: 401 }
+    );
+  }
+
+  const body = (() => {
+    try {
+      return JSON.parse(rawBody);
+    } catch {
+      return null;
+    }
+  })();
   const transaction = body?.transaction;
   const paymentId = typeof transaction?.id === 'string' ? transaction.id : undefined;
   const statusCode = typeof transaction?.status_code === 'string' ? transaction.status_code : undefined;

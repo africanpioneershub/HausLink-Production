@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma/client';
 import { sendContactFormEmail } from '@/lib/email/templates';
 import { sendWhatsAppContactConfirmation } from '@/lib/whatsapp/templates';
+import { authRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(150),
@@ -13,6 +14,15 @@ const contactSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const { success: withinLimit } = await applyRateLimit(authRateLimit, `contact:${ip}`);
+  if (!withinLimit) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' },
+      { status: 429 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   if (!body) {
     return NextResponse.json(

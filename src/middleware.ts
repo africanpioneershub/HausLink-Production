@@ -94,7 +94,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (config.extraGates.includes('TWO_FA_VERIFIED')) {
+  if (config.extraGates.includes('TWO_FA_VERIFIED') && pathname !== '/admin/2fa-challenge') {
     const twoFa = user.user_metadata?.two_fa_verified as boolean;
     if (!twoFa) {
       return NextResponse.redirect(new URL('/admin/2fa-challenge', request.url));
