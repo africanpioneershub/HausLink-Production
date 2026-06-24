@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  phone             String?
+  role              String    @default("TENANT")
+  status            String    @default("PENDING")
+  kyc_status        String    @default("NOT_SUBMITTED")
+  registration_paid Boolean   @default(false)
+  avatar_url        String?
+  city              String?
+  district          String?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  preferences            UserPreference?
+  properties             Property[]
+  tenant_applications    Application[]    @relation("TenantApplications")
+  landlord_applications  Application[]    @relation("LandlordApplications")
+  tenant_tenancies       Tenancy[]        @relation("TenantTenancies")
+  landlord_tenancies     Tenancy[]        @relation("LandlordTenancies")
+  tenant_payments        Payment[]        @relation("TenantPayments")
+  landlord_payments      Payment[]        @relation("LandlordPayments")
+  maintenance            MaintenanceRequest[]
+  tenant_conversations   Conversation[]   @relation("TenantConversations")
+  landlord_conversations Conversation[]   @relation("LandlordConversations")
+  saved_properties       SavedProperty[]
+  kyc_documents          KYCDocument[]
+  expenses               Expense[]
+  reports                ReportFlag[]
+
+  @@map("users")
+}
+
+model UserPreference {
+  id                    String   @id @default(cuid())
+  user_id               String   @unique
+  language              String   @default("EN")
+  notification_email    Boolean  @default(true)
+  notification_whatsapp Boolean  @default(true)
+  payout_momo_number    String?
+  theme                 String   @default("light")
+  updated_at            DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Property {
+  id             String    @id @default(cuid())
+  landlord_id    String
+  title          String
+  description    String?
+  type           String
+  status         String    @default("DRAFT")
+  featured       Boolean   @default(false)
+  featured_until DateTime?
+  district       String
+  city           String    @default("Kigali")
+  address        String?
+  bedrooms       Int       @default(1)
+  bathrooms      Int       @default(1)
+  rent_rwf       Int
+  deposit_rwf    Int       @default(0)
+  lat            Decimal?
+  lng            Decimal?
+  is_verified    Boolean   @default(false)
+  view_count     Int       @default(0)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  landlord      User               @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
+  images        PropertyImage[]
+  applications  Application[]
+  tenancies     Tenancy[]
+  maintenance   MaintenanceRequest[]
+  conversations Conversation[]
+  saved_by      SavedProperty[]
+  expenses      Expense[]
+
+  @@map("properties")
+}
+
+model PropertyImage {
+  id            String   @id @default(cuid())
+  property_id   String
+  storage_path  String
+  cdn_url       String?
+  is_primary    Boolean  @default(false)
+  display_order Int      @default(0)
+  created_at    DateTime @default(now())
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("property_images")
+}
+
+model Application {
+  id           String    @id @default(cuid())
+  tenant_id    String
+  landlord_id  String
+  property_id  String
+  status       String    @default("PENDING")
+  income_rwf   Int?
+  id_doc_url   String?
+  payslip_url  String?
+  bank_doc_url String?
+  notes        String?
+  applied_at   DateTime  @default(now())
+  reviewed_at  DateTime?
+  updated_at   DateTime  @updatedAt
+
+  tenant   User     @relation("TenantApplications", fields: [tenant_id], references: [id], onDelete: Cascade)
+  landlord User     @relation("LandlordApplications", fields: [landlord_id], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("applications")
+}
+
+model Tenancy {
+  id                 String    @id @default(cuid())
+  tenant_id          String
+  landlord_id        String
+  property_id        String
+  status             String    @default("ACTIVE")
+  rent_rwf           Int
+  deposit_rwf        Int       @default(0)
+  start_date         DateTime
+  end_date           DateTime
+  termination_reason String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  tenant   User     @relation("TenantTenancies", fields: [tenant_id], references: [id], onDelete: Cascade)
+  landlord User     @relation("LandlordTenancies", fields: [landlord_id], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@map("tenancies")
+}
+
+model Payment {
+  id              String    @id @default(cuid())
+  tenant_id       String
+  landlord_id     String
+  tenancy_id      String?
+  type            String
+  status          String    @default("PENDING")
+  method          String
+  amount_rwf      Int
+  txn_ref         String?   @unique
+  idempotency_key String    @unique
+  invoice_code    String?
+  paid_at         DateTime?
+  created_at      DateTime  @default(now())
+
+  tenant       User         @relation("TenantPayments", fields: [tenant_id], references: [id], onDelete: Cascade)
+  landlord     User         @relation("LandlordPayments", fields: [landlord_id], references: [id], onDelete: Cascade)
+  tenancy      Tenancy?     @relation(fields: [tenancy_id], references: [id], onDelete: SetNull)
+  ledger_entry LedgerEntry?
+
+  @@map("payments")
+}
+
+model LedgerEntry {
+  id                   String    @id @default(cuid())
+  payment_id           String    @unique
+  gross_amount_rwf     Int
+  platform_fee_rwf     Int
+  landlord_net_rwf     Int
+  disbursement_status  String    @default("PENDING")
+  disbursement_txn_ref String?
+  disbursed_at         DateTime?
+  created_at           DateTime  @default(now())
+
+  payment Payment @relation(fields: [payment_id], references: [id], onDelete: Restrict)
+
+  @@map("ledger_entries")
+}
+
+model MaintenanceRequest {
+  id          String    @id @default(cuid())
+  tenant_id   String
+  landlord_id String
+  property_id String
+  title       String
+  description String
+  category    String    @default("OTHER")
+  priority    String    @default("MEDIUM")
+  status      String    @default("PENDING")
+  photo_urls  String[]
+  resolved_at DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  tenant   User     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("maintenance_requests")
+}
+
+model Conversation {
+  id              String    @id @default(cuid())
+  tenant_id       String
+  landlord_id     String
+  property_id     String
+  status          String    @default("ACTIVE")
+  last_message_at DateTime?
+  flagged_at      DateTime?
+  flagged_reason  String?
+  created_at      DateTime  @default(now())
+
+  tenant   User      @relation("TenantConversations", fields: [tenant_id], references: [id], onDelete: Cascade)
+  landlord User      @relation("LandlordConversations", fields: [landlord_id], references: [id], onDelete: Cascade)
+  property Property  @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id              String    @id @default(cuid())
+  conversation_id String
+  sender_id       String
+  body            String
+  sent_at         DateTime  @default(now())
+  read_at         DateTime?
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model KYCDocument {
+  id            String    @id @default(cuid())
+  user_id       String
+  document_type String
+  storage_path  String
+  review_status String    @default("PENDING")
+  reviewed_by   String?
+  submitted_at  DateTime  @default(now())
+  reviewed_at   DateTime?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("kyc_documents")
+}
+
+model Expense {
+  id           String    @id @default(cuid())
+  landlord_id  String
+  property_id  String?
+  category     String
+  amount_rwf   Int
+  description  String?
+  expense_date DateTime
+  created_at   DateTime  @default(now())
+
+  landlord User      @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
+  property Property? @relation(fields: [property_id], references: [id], onDelete: SetNull)
+
+  @@map("expenses")
+}
+
+model SavedProperty {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  property_id String
+  saved_at    DateTime @default(now())
+
+  tenant   User     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, property_id])
+  @@map("saved_properties")
+}
+
+model ReportFlag {
+  id          String    @id @default(cuid())
+  reporter_id String?
+  type        String
+  description String
+  priority    String    @default("MEDIUM")
+  status      String    @default("PENDING")
+  resolved_at DateTime?
+  created_at  DateTime  @default(now())
+
+  reporter User? @relation(fields: [reporter_id], references: [id], onDelete: SetNull)
+
+  @@map("reports_flags")
+}
+
+model PlatformConfig {
+  id                           String   @id @default("singleton")
+  platform_name                String   @default("HausLink")
+  support_email                String   @default("support@hauslink.rw")
+  support_whatsapp             String   @default("+250788000000")
+  is_live                      Boolean  @default(false)
+  allow_registrations          Boolean  @default(true)
+  require_listing_approval     Boolean  @default(true)
+  tenant_monthly_rwf           Int      @default(5000)
+  landlord_registration_rwf    Int      @default(10000)
+  transaction_fee_pct          Decimal  @default(0.02)
+  featured_listing_monthly_rwf Int      @default(25000)
+  featured_listing_weekly_rwf  Int      @default(10000)
+  notification_settings        Json     @default("{}")
+  security_settings            Json     @default("{}")
+  updated_at                   DateTime @updatedAt
+
+  @@map("platform_config")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  admin_id    String?
+  user_id     String?
+  action      String
+  entity_type String
+  entity_id   String?
+  ip_address  String?
+  metadata    Json     @default("{}")
+  created_at  DateTime @default(now())
+
+  @@map("audit_log")
+}

@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma/client';
+
+const contactSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(150),
+  email: z.string().email('Enter a valid email address'),
+  subject: z.string().min(2, 'Subject must be at least 2 characters').max(150),
+  message: z.string().min(5, 'Message must be at least 5 characters').max(5000),
+});
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid request body', code: 'INVALID_BODY' },
+      { status: 400 }
+    );
+  }
+
+  const parsed = contactSchema.safeParse(body);
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? 'Invalid input';
+    return NextResponse.json(
+      { success: false, error: message, code: 'VALIDATION_ERROR' },
+      { status: 400 }
+    );
+  }
+
+  const { name, email, subject, message } = parsed.data;
+
+  try {
+    await prisma.reportFlag.create({
+      data: {
+        type: 'DOCUMENTS',
+        description: `Contact form submission\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`,
+      },
+    });
+  } catch (dbError) {
+    console.error('[contact] Failed to persist contact submission, logging instead:', {
+      name,
+      email,
+      subject,
+      message,
+      error: dbError,
+    });
+  }
+
+  return NextResponse.json({ success: true }, { status: 201 });
+}

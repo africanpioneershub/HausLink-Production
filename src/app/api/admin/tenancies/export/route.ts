@@ -1,0 +1,81 @@
+import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth/withAuth';
+import { prisma } from '@/lib/prisma/client';
+import { logAudit } from '@/lib/audit/logger';
+import { AUDIT_ACTIONS } from '@/lib/constants';
+
+function escapeCsv(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+const BATCH_SIZE = 200;
+
+export const GET = withAuth(['ADMIN'])(
+  async (request, _context, admin) => {
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        const header =
+          ['ID', 'Tenant', 'Landlord', 'Property', 'Status', 'Rent (RWF)', 'Start Date', 'End Date'].join(
+            ','
+          ) + '\n';
+        controller.enqueue(encoder.encode(header));
+
+        let skip = 0;
+        for (;;) {
+          const batch = await prisma.tenancy.findMany({
+            skip,
+            take: BATCH_SIZE,
+            orderBy: { created_at: 'desc' },
+            include: {
+              tenant: { select: { name: true, email: true } },
+              landlord: { select: { name: true, email: true } },
+              property: { select: { title: true } },
+            },
+          });
+
+          if (batch.length === 0) break;
+
+          for (const t of batch) {
+            const row =
+              [
+                t.id,
+                t.tenant.name ?? t.tenant.email,
+                t.landlord.name ?? t.landlord.email,
+                t.property.title,
+                t.status,
+                String(t.rent_rwf),
+                t.start_date.toISOString(),
+                t.end_date.toISOString(),
+              ]
+                .map((value) => escapeCsv(String(value)))
+                .join(',') + '\n';
+            controller.enqueue(encoder.encode(row));
+          }
+
+          skip += BATCH_SIZE;
+          if (batch.length < BATCH_SIZE) break;
+        }
+
+        controller.close();
+      },
+    });
+
+    await logAudit({
+      action: AUDIT_ACTIONS.TENANCIES_EXPORTED,
+      entityType: 'Tenancy',
+      adminId: admin.id,
+      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+    });
+
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="tenancies.csv"',
+      },
+    });
+  }
+);
