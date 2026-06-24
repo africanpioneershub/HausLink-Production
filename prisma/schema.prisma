@@ -12,6 +12,7 @@ model User {
   email             String    @unique
   name              String?
   phone             String?
+  whatsapp          String?
   role              String    @default("TENANT")
   status            String    @default("PENDING")
   kyc_status        String    @default("NOT_SUBMITTED")
@@ -30,7 +31,8 @@ model User {
   landlord_tenancies     Tenancy[]        @relation("LandlordTenancies")
   tenant_payments        Payment[]        @relation("TenantPayments")
   landlord_payments      Payment[]        @relation("LandlordPayments")
-  maintenance            MaintenanceRequest[]
+  maintenance              MaintenanceRequest[]
+  maintenance_as_landlord  MaintenanceRequest[] @relation("MaintenanceLandlord")
   tenant_conversations   Conversation[]   @relation("TenantConversations")
   landlord_conversations Conversation[]   @relation("LandlordConversations")
   saved_properties       SavedProperty[]
@@ -204,6 +206,7 @@ model MaintenanceRequest {
   updated_at  DateTime  @updatedAt
 
   tenant   User     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  landlord User     @relation("MaintenanceLandlord", fields: [landlord_id], references: [id])
   property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
 
   @@map("maintenance_requests")

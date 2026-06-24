@@ -55,8 +55,9 @@ export const POST = withAuth(['ADMIN'])(
         console.error('[kyc approve] Email failed', error)
       );
     }
-    if (targetUser.phone) {
-      sendWhatsAppKYCApproved({ phone: targetUser.phone, name: targetUser.name ?? 'there' }).catch(
+    const whatsappPhone = targetUser.whatsapp ?? targetUser.phone;
+    if (whatsappPhone) {
+      sendWhatsAppKYCApproved({ phone: whatsappPhone, name: targetUser.name ?? 'there' }).catch(
         (error) => console.error('[kyc approve] WhatsApp failed', error)
       );
     }

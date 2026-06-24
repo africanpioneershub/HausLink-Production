@@ -101,6 +101,7 @@ export async function POST(request: Request) {
         email,
         name,
         phone: fullPhone,
+        whatsapp: fullWhatsapp,
         role,
         status: 'PENDING',
         kyc_status: 'NOT_SUBMITTED',

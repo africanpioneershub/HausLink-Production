@@ -62,9 +62,10 @@ export const POST = withAuth(['LANDLORD'])(
         status: 'APPROVED',
       }).catch((error) => console.error('[application approve] Email failed', error));
 
-      if (tenant.phone) {
+      const whatsappPhone = tenant.whatsapp ?? tenant.phone;
+      if (whatsappPhone) {
         sendWhatsAppApplicationStatus({
-          phone: tenant.phone,
+          phone: whatsappPhone,
           tenantName: tenant.name ?? 'there',
           propertyTitle: application.property.title,
           status: 'APPROVED',

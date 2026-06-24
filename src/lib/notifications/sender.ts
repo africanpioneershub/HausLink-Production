@@ -41,22 +41,23 @@ export async function sendNotification({ userId, type, data }: SendNotificationP
     return;
   }
 
+  const whatsappPhone = user.whatsapp ?? user.phone;
   const wantsEmail = user.preferences?.notification_email ?? true;
-  const wantsWhatsapp = (user.preferences?.notification_whatsapp ?? true) && !!user.phone;
+  const wantsWhatsapp = (user.preferences?.notification_whatsapp ?? true) && !!whatsappPhone;
 
   const name = user.name ?? 'there';
 
   switch (type) {
     case 'KYC_APPROVED':
       if (wantsEmail) await sendKYCApprovedEmail({ name, email: user.email });
-      if (wantsWhatsapp) await sendWhatsAppKYCApproved({ phone: user.phone!, name });
+      if (wantsWhatsapp) await sendWhatsAppKYCApproved({ phone: whatsappPhone!, name });
       break;
 
     case 'KYC_REJECTED':
       if (wantsEmail)
         await sendKYCRejectedEmail({ name, email: user.email, reason: data.reason });
       if (wantsWhatsapp)
-        await sendWhatsAppKYCRejected({ phone: user.phone!, name, reason: data.reason });
+        await sendWhatsAppKYCRejected({ phone: whatsappPhone!, name, reason: data.reason });
       break;
 
     case 'APPLICATION_STATUS':
@@ -70,7 +71,7 @@ export async function sendNotification({ userId, type, data }: SendNotificationP
         });
       if (wantsWhatsapp)
         await sendWhatsAppApplicationStatus({
-          phone: user.phone!,
+          phone: whatsappPhone!,
           tenantName: name,
           propertyTitle: data.propertyTitle,
           status: data.status,
@@ -89,7 +90,7 @@ export async function sendNotification({ userId, type, data }: SendNotificationP
         });
       if (wantsWhatsapp)
         await sendWhatsAppRentDue({
-          phone: user.phone!,
+          phone: whatsappPhone!,
           tenantName: name,
           propertyTitle: data.propertyTitle,
           amount: data.amount,
@@ -108,7 +109,7 @@ export async function sendNotification({ userId, type, data }: SendNotificationP
         });
       if (wantsWhatsapp)
         await sendWhatsAppMaintenanceUpdate({
-          phone: user.phone!,
+          phone: whatsappPhone!,
           tenantName: name,
           requestTitle: data.requestTitle,
           status: data.status,
@@ -127,7 +128,7 @@ export async function sendNotification({ userId, type, data }: SendNotificationP
         });
       if (wantsWhatsapp)
         await sendWhatsAppLeaseExpiry({
-          phone: user.phone!,
+          phone: whatsappPhone!,
           tenantName: name,
           propertyTitle: data.propertyTitle,
           daysRemaining: data.daysRemaining,

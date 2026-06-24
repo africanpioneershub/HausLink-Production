@@ -46,9 +46,10 @@ export const POST = withAuth(['ADMIN'])(
         note,
       }).catch((error) => console.error('[maintenance assign] Email failed', error));
 
-      if (tenant.phone) {
+      const whatsappPhone = tenant.whatsapp ?? tenant.phone;
+      if (whatsappPhone) {
         sendWhatsAppMaintenanceUpdate({
-          phone: tenant.phone,
+          phone: whatsappPhone,
           tenantName: tenant.name ?? 'there',
           requestTitle: maintenanceRequest.title,
           status: updated.status,

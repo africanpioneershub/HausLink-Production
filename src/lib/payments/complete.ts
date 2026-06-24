@@ -79,9 +79,12 @@ export async function completePayment(
     transactionRef,
   }).catch((error) => console.error('[completePayment] Email failed', error));
 
-  if (payment.tenant.phone) {
+  const tenantWhatsapp = payment.tenant.whatsapp ?? payment.tenant.phone;
+  const landlordWhatsapp = payment.landlord.whatsapp ?? payment.landlord.phone;
+
+  if (tenantWhatsapp) {
     sendWhatsAppRentPaid({
-      phone: payment.tenant.phone,
+      phone: tenantWhatsapp,
       name: payment.tenant.name ?? 'there',
       propertyTitle,
       amount: grossAmount,
@@ -90,9 +93,9 @@ export async function completePayment(
     }).catch((error) => console.error('[completePayment] Tenant WhatsApp failed', error));
   }
 
-  if (payment.landlord.phone) {
+  if (landlordWhatsapp) {
     sendWhatsAppRentPaid({
-      phone: payment.landlord.phone,
+      phone: landlordWhatsapp,
       name: payment.landlord.name ?? 'there',
       propertyTitle,
       amount: netAmount,
