@@ -1,4 +1,5 @@
 import { AlertTriangle, Building2, FileText, ShieldCheck, Users, Wallet } from 'lucide-react';
+import type { User } from '@prisma/client';
 import { prisma } from '@/lib/prisma/client';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { RevenueChart } from '@/components/admin/RevenueChart';
@@ -20,20 +21,37 @@ export default async function AdminDashboardPage() {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setDate(1);
 
-  const [kpiRows, recentPayments, pendingKycUsers] = await Promise.all([
-    prisma.$queryRaw<AdminKpiRow[]>`SELECT * FROM get_admin_dashboard_kpis()`,
-    prisma.payment.findMany({
-      where: { status: 'COMPLETED', paid_at: { gte: sixMonthsAgo } },
-      select: { amount_rwf: true, paid_at: true },
-    }),
-    prisma.user.findMany({
-      where: { kyc_status: 'PENDING' },
-      orderBy: { created_at: 'asc' },
-      take: 5,
-    }),
-  ]);
+  let kpis: AdminKpiRow = {
+    total_users: 0,
+    total_properties: 0,
+    platform_revenue_rwf: 0,
+    pending_kyc: 0,
+    pending_applications: 0,
+    failed_payments: 0,
+  };
+  let recentPayments: { amount_rwf: number; paid_at: Date | null }[] = [];
+  let pendingKycUsers: User[] = [];
 
-  const kpis = kpiRows[0];
+  try {
+    const [kpiRows, payments, kycUsers] = await Promise.all([
+      prisma.$queryRaw<AdminKpiRow[]>`SELECT * FROM get_admin_dashboard_kpis()`,
+      prisma.payment.findMany({
+        where: { status: 'COMPLETED', paid_at: { gte: sixMonthsAgo } },
+        select: { amount_rwf: true, paid_at: true },
+      }),
+      prisma.user.findMany({
+        where: { kyc_status: 'PENDING' },
+        orderBy: { created_at: 'asc' },
+        take: 5,
+      }),
+    ]);
+
+    kpis = kpiRows[0] ?? kpis;
+    recentPayments = payments;
+    pendingKycUsers = kycUsers;
+  } catch (error) {
+    console.error('[admin/dashboard] DB error:', error);
+  }
 
   const monthlyRevenue = new Map<string, number>();
   for (let i = 0; i < 6; i++) {
