@@ -50,10 +50,34 @@ const STATS = [
 ];
 
 const PARTNERS = [
-  { name: 'MTN Mobile Money', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  { name: 'Airtel Money', color: 'bg-red-100 text-red-800 border-red-300' },
-  { name: 'Supabase', color: 'bg-green-100 text-green-800 border-green-300' },
-  { name: 'Vercel', color: 'bg-gray-900 text-white border-gray-900' },
+  {
+    name: 'MTN Mobile Money',
+    logo: '/logos/mtn.svg',
+    bg: 'bg-yellow-50 border-yellow-200',
+    width: 120,
+    height: 48,
+  },
+  {
+    name: 'Airtel Money',
+    logo: '/logos/airtel.svg',
+    bg: 'bg-red-50 border-red-200',
+    width: 120,
+    height: 48,
+  },
+  {
+    name: 'Supabase',
+    logo: '/logos/supabase.svg',
+    bg: 'bg-green-50 border-green-200',
+    width: 48,
+    height: 48,
+  },
+  {
+    name: 'Vercel',
+    logo: '/logos/vercel.svg',
+    bg: 'bg-gray-50 border-gray-200',
+    width: 120,
+    height: 48,
+  },
 ];
 
 function teamPhotoExists(filename: string): boolean {
@@ -196,14 +220,21 @@ export default function AboutPage() {
       <section className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-10">Our Partners &amp; Stack</h2>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-6">
             {PARTNERS.map((partner) => (
-              <span
+              <div
                 key={partner.name}
-                className={`border rounded-full px-6 py-3 text-sm font-semibold ${partner.color}`}
+                className={`flex flex-col items-center justify-center gap-3 border rounded-2xl px-8 py-6 ${partner.bg} hover:shadow-md transition-shadow`}
               >
-                {partner.name}
-              </span>
+                <Image
+                  src={partner.logo}
+                  alt={partner.name}
+                  width={partner.width}
+                  height={partner.height}
+                  className="object-contain"
+                />
+                <span className="text-xs font-semibold text-gray-600">{partner.name}</span>
+              </div>
             ))}
           </div>
         </div>
