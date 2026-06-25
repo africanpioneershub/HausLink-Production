@@ -13,13 +13,26 @@ const registerSchema = z.object({
   role: z.enum(['TENANT', 'LANDLORD']),
   phone: z.string().min(4).max(20),
   whatsapp: z.string().min(4).max(20),
-  city: z.string().min(1).max(100),
+  city: z.string().max(100).optional(),
   district: z.string().min(1).max(100),
   countryCode: z.string().min(1).max(6),
   whatsappCountryCode: z.string().min(1).max(6),
 });
 
 export async function POST(request: Request) {
+  try {
+    return await handleRegister(request);
+  } catch (error) {
+    console.error('[register] Unhandled exception in register route', error);
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    return NextResponse.json(
+      { success: false, error: message, code: 'INTERNAL_ERROR' },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleRegister(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const { success: withinLimit } = await applyRateLimit(authRateLimit, `register:${ip}`);
   if (!withinLimit) {
@@ -30,10 +43,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
+  console.log('[register] body received:', JSON.stringify(body));
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
+    console.error('[register] Zod validation failed', parsed.error.flatten());
     return NextResponse.json(
-      { success: false, error: 'Invalid input', code: 'VALIDATION_ERROR' },
+      { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input', code: 'VALIDATION_ERROR' },
       { status: 400 }
     );
   }
@@ -123,8 +138,9 @@ export async function POST(request: Request) {
         error: rollbackError,
       });
     }
+    const message = dbError instanceof Error ? dbError.message : 'Failed to create account';
     return NextResponse.json(
-      { success: false, error: 'Failed to create account', code: 'DB_ERROR' },
+      { success: false, error: message, code: 'DB_ERROR' },
       { status: 500 }
     );
   }
