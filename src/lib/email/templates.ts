@@ -55,7 +55,7 @@ export async function sendAccountApprovedEmail({
     'Your HausLink account is approved!',
     `<p>Great news ${name}!</p>
      <p>Your HausLink account has been approved. You can now log in and start using the platform.</p>
-     <p><a href="https://hauslink.vercel.app/login">Log in to HausLink</a></p>
+     <p><a href="https://hauselink.com/login">Log in to HausLink</a></p>
      <p><strong>What you can do now:</strong> ${whatCanYouDo}</p>
      <p>— The HausLink Team</p>`
   );
