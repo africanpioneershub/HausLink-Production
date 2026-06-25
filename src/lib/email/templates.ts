@@ -1,6 +1,6 @@
 import { resend } from './client';
 
-const FROM = 'HausLink <notifications@hauslink.rw>';
+const FROM = 'HausLink <onboarding@resend.dev>';
 const SUPPORT_EMAIL = 'afriprimeholdings@gmail.com';
 
 async function send(to: string, subject: string, html: string) {
