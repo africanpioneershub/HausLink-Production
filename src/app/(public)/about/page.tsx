@@ -42,43 +42,6 @@ const TEAM = [
   },
 ];
 
-const STATS = [
-  { value: '30+', label: 'Districts Covered' },
-  { value: '5', label: 'Team Members' },
-  { value: '2', label: 'Payment Methods' },
-  { value: '1', label: 'Vision: Pan-Africa' },
-];
-
-const PARTNERS = [
-  {
-    name: 'MTN Mobile Money',
-    logo: '/logos/mtn.svg',
-    bg: 'bg-yellow-50 border-yellow-200',
-    width: 120,
-    height: 48,
-  },
-  {
-    name: 'Airtel Money',
-    logo: '/logos/airtel.svg',
-    bg: 'bg-red-50 border-red-200',
-    width: 120,
-    height: 48,
-  },
-  {
-    name: 'Supabase',
-    logo: '/logos/supabase.svg',
-    bg: 'bg-green-50 border-green-200',
-    width: 48,
-    height: 48,
-  },
-  {
-    name: 'Vercel',
-    logo: '/logos/vercel.svg',
-    bg: 'bg-gray-50 border-gray-200',
-    width: 120,
-    height: 48,
-  },
-];
 
 function teamPhotoExists(filename: string): boolean {
   try {
@@ -196,46 +159,6 @@ export default function AboutPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="bg-[#0f2d5e] py-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {STATS.map((stat) => (
-              <div key={stat.label}>
-                <p className="text-4xl font-extrabold text-brand-teal mb-2">{stat.value}</p>
-                <p className="text-sm text-gray-300 font-medium uppercase tracking-wide">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Partners */}
-      <section className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-10">Our Partners &amp; Stack</h2>
-          <div className="flex flex-wrap justify-center gap-6">
-            {PARTNERS.map((partner) => (
-              <div
-                key={partner.name}
-                className={`flex flex-col items-center justify-center gap-3 border rounded-2xl px-8 py-6 ${partner.bg} hover:shadow-md transition-shadow`}
-              >
-                <Image
-                  src={partner.logo}
-                  alt={partner.name}
-                  width={partner.width}
-                  height={partner.height}
-                  className="object-contain"
-                />
-                <span className="text-xs font-semibold text-gray-600">{partner.name}</span>
-              </div>
-            ))}
           </div>
         </div>
       </section>
