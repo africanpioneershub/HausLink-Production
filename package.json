@@ -10,7 +10,7 @@
     "worker": "npx ts-node --esm src/worker.ts",
     "setup:momo": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/setup-momo-sandbox.ts",
     "test:airtel": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/test-airtel-sandbox.ts",
-    "postinstall": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate"
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

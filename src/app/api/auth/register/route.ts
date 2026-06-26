@@ -43,7 +43,6 @@ async function handleRegister(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  console.log('[register] body received:', JSON.stringify(body));
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
     console.error('[register] Zod validation failed', parsed.error.flatten());
