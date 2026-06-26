@@ -176,12 +176,6 @@ export default function PublicPropertiesPage() {
               {showFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
             <button
-              onClick={handleClearAll}
-              className="border border-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-wide px-4 py-3 rounded-lg hover:border-brand-teal hover:text-brand-teal transition-colors"
-            >
-              Clear
-            </button>
-            <button
               onClick={() => {
                 setDebouncedSearch(search);
                 setPage(1);
