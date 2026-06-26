@@ -10,11 +10,15 @@ export default async function LandlordDashboardPage() {
 
   if (!user) return null;
 
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
   const [
     totalProperties,
     occupiedProperties,
     activeTenants,
-    rentAggregate,
+    monthlyCollected,
     maintenanceOpen,
     pendingApplications,
     recentMaintenance,
@@ -23,9 +27,9 @@ export default async function LandlordDashboardPage() {
     prisma.property.count({ where: { landlord_id: user.id } }),
     prisma.property.count({ where: { landlord_id: user.id, status: 'OCCUPIED' } }),
     prisma.tenancy.count({ where: { landlord_id: user.id, status: 'ACTIVE' } }),
-    prisma.tenancy.aggregate({
-      where: { landlord_id: user.id, status: 'ACTIVE' },
-      _sum: { rent_rwf: true },
+    prisma.payment.aggregate({
+      where: { landlord_id: user.id, status: 'COMPLETED', paid_at: { gte: startOfMonth } },
+      _sum: { amount_rwf: true },
     }),
     prisma.maintenanceRequest.count({
       where: { landlord_id: user.id, status: { in: ['PENDING', 'IN_PROGRESS'] } },
@@ -47,7 +51,7 @@ export default async function LandlordDashboardPage() {
 
   const occupancyRate =
     totalProperties > 0 ? Math.round((occupiedProperties / totalProperties) * 100) : 0;
-  const totalRentThisMonth = rentAggregate._sum.rent_rwf ?? 0;
+  const collectedThisMonth = monthlyCollected._sum.amount_rwf ?? 0;
 
   return (
     <div className="space-y-6">
@@ -56,8 +60,8 @@ export default async function LandlordDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard label="Occupancy Rate" value={`${occupancyRate}%`} icon={Building2} colorScheme="teal" />
         <KpiCard
-          label="Total Rent This Month"
-          value={formatRwf(totalRentThisMonth)}
+          label="Collected This Month"
+          value={formatRwf(collectedThisMonth)}
           icon={Wallet}
           colorScheme="gold"
         />

@@ -46,9 +46,11 @@ const PROPERTY_TYPES = [
   { value: '', label: 'All' },
   { value: 'APARTMENT', label: 'Apartment' },
   { value: 'HOUSE', label: 'House' },
-  { value: 'VILLA', label: 'Villa' },
+  { value: 'ROOM', label: 'Room' },
   { value: 'STUDIO', label: 'Studio' },
+  { value: 'VILLA', label: 'Villa' },
   { value: 'OFFICE', label: 'Office' },
+  { value: 'COMMERCIAL', label: 'Commercial' },
 ];
 
 const BEDROOM_OPTIONS = ['Any', '1', '2', '3', '4+'];

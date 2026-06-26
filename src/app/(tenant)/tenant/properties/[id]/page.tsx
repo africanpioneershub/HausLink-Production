@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma/client';
 import { formatRwf } from '@/lib/utils';
 import { SaveToggle } from '@/components/tenant/SaveToggle';
+import { ApplyButton } from '@/components/tenant/ApplyButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,19 +17,35 @@ export default async function TenantPropertyDetailPage({
 
   if (!user) return null;
 
-  const property = await prisma.property.findUnique({
-    where: { id: params.id },
-    include: {
-      images: { orderBy: { display_order: 'asc' } },
-      landlord: { select: { id: true, name: true } },
-    },
-  });
+  const [property, dbUser, saved, existingApplication] = await Promise.all([
+    prisma.property.findUnique({
+      where: { id: params.id },
+      include: {
+        images: { orderBy: { display_order: 'asc' } },
+        landlord: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { kyc_status: true },
+    }),
+    prisma.savedProperty.findUnique({
+      where: { tenant_id_property_id: { tenant_id: user.id, property_id: params.id } },
+    }),
+    prisma.application.findFirst({
+      where: {
+        tenant_id: user.id,
+        property_id: params.id,
+        status: { in: ['PENDING', 'REVIEWING', 'APPROVED'] },
+      },
+      select: { status: true },
+    }),
+  ]);
 
   if (!property) notFound();
 
-  const saved = await prisma.savedProperty.findUnique({
-    where: { tenant_id_property_id: { tenant_id: user.id, property_id: property.id } },
-  });
+  const kycStatus = dbUser?.kyc_status ?? 'NOT_SUBMITTED';
+  const isAvailable = property.status === 'ACTIVE';
 
   return (
     <div className="space-y-6">
@@ -86,11 +103,11 @@ export default async function TenantPropertyDetailPage({
         </div>
         <div>
           <p className="text-gray-500">Bedrooms</p>
-          <p className="font-semibold text-gray-900">{property.bedrooms}</p>
+          <p className="font-semibold text-gray-900">{property.bedrooms ?? '—'}</p>
         </div>
         <div>
           <p className="text-gray-500">Bathrooms</p>
-          <p className="font-semibold text-gray-900">{property.bathrooms}</p>
+          <p className="font-semibold text-gray-900">{property.bathrooms ?? '—'}</p>
         </div>
       </div>
 
@@ -105,6 +122,17 @@ export default async function TenantPropertyDetailPage({
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Landlord</h2>
         <p className="text-sm text-gray-600">{property.landlord.name ?? 'Not provided'}</p>
       </div>
+
+      {isAvailable && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Apply for This Property</h2>
+          <ApplyButton
+            propertyId={property.id}
+            kycStatus={kycStatus}
+            initialApplicationStatus={existingApplication?.status ?? null}
+          />
+        </div>
+      )}
     </div>
   );
 }

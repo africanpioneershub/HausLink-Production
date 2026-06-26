@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { label: 'Verifications', href: '/admin/properties', icon: ShieldCheck },
+  { label: 'Properties & KYC', href: '/admin/properties', icon: ShieldCheck },
   { label: 'User Management', href: '/admin/users', icon: Users },
   { label: 'Applications', href: '/admin/applications', icon: FileText },
   { label: 'Tenancies', href: '/admin/tenancies', icon: Home },

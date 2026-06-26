@@ -1,10 +1,24 @@
+import { timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { completePayment, failPayment } from '@/lib/payments/complete';
 
+function isValidMomoToken(token: string | null): boolean {
+  const secret = process.env.MOMO_SUBSCRIPTION_KEY;
+  if (!token || !secret) return false;
+  try {
+    const tokenBuf = Buffer.from(token);
+    const secretBuf = Buffer.from(secret);
+    if (tokenBuf.length !== secretBuf.length) return false;
+    return timingSafeEqual(tokenBuf, secretBuf);
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   const callbackToken = request.headers.get('x-callback-token');
-  if (!callbackToken || callbackToken !== process.env.MOMO_SUBSCRIPTION_KEY) {
+  if (!isValidMomoToken(callbackToken)) {
     return NextResponse.json(
       { success: false, error: 'Invalid callback token', code: 'UNAUTHORIZED' },
       { status: 401 }
