@@ -35,7 +35,14 @@ export async function GET(request: Request) {
   }
 
   const where: Prisma.PropertyWhereInput = { status: 'ACTIVE' };
-  if (search) where.title = { contains: search, mode: 'insensitive' };
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { city: { contains: search, mode: 'insensitive' } },
+      { district: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ];
+  }
   if (type) where.type = type;
   if (district) where.district = district;
   if (minPrice || maxPrice) {

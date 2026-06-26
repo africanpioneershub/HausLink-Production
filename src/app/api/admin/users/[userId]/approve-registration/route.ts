@@ -28,6 +28,7 @@ export const POST = withAuth(['ADMIN'])(
     });
 
     await deleteCache(CACHE_KEYS.userProfile(userId));
+    await deleteCache('public:stats');
 
     await logAudit({
       action: AUDIT_ACTIONS.REGISTRATION_APPROVED,

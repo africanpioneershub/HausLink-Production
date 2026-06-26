@@ -55,6 +55,7 @@ const BEDROOM_OPTIONS = ['Any', '1', '2', '3', '4+'];
 
 export default function PublicPropertiesPage() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [properties, setProperties] = useState<PropertyCardData[]>([]);
   const [total, setTotal] = useState(0);
@@ -65,7 +66,39 @@ export default function PublicPropertiesPage() {
   const [filterDistrict, setFilterDistrict] = useState('');
   const [filterMinPrice, setFilterMinPrice] = useState('');
   const [filterMaxPrice, setFilterMaxPrice] = useState('');
+  const [debouncedMinPrice, setDebouncedMinPrice] = useState('');
+  const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('');
   const [filterBeds, setFilterBeds] = useState('');
+
+  // Pre-populate search from URL param (e.g. when navigating from the landing page)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('search');
+    if (q) {
+      setSearch(q);
+      setDebouncedSearch(q);
+    }
+  }, []);
+
+  // Debounce search — 400 ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Debounce price inputs
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedMinPrice(filterMinPrice), 400);
+    return () => clearTimeout(timer);
+  }, [filterMinPrice]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedMaxPrice(filterMaxPrice), 400);
+    return () => clearTimeout(timer);
+  }, [filterMaxPrice]);
 
   const activeFilterCount = [filterType, filterDistrict, filterMinPrice, filterMaxPrice, filterBeds]
     .filter(Boolean).length;
@@ -73,11 +106,11 @@ export default function PublicPropertiesPage() {
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (search.trim()) params.set('search', search.trim());
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (filterType) params.set('type', filterType);
     if (filterDistrict) params.set('district', filterDistrict);
-    if (filterMinPrice) params.set('minPrice', filterMinPrice);
-    if (filterMaxPrice) params.set('maxPrice', filterMaxPrice);
+    if (debouncedMinPrice) params.set('minPrice', debouncedMinPrice);
+    if (debouncedMaxPrice) params.set('maxPrice', debouncedMaxPrice);
     if (filterBeds) params.set('beds', filterBeds);
 
     fetch(`/api/public/properties?${params.toString()}`)
@@ -90,19 +123,27 @@ export default function PublicPropertiesPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [search, page, filterType, filterDistrict, filterMinPrice, filterMaxPrice, filterBeds]);
+  }, [debouncedSearch, page, filterType, filterDistrict, debouncedMinPrice, debouncedMaxPrice, filterBeds]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  // Flush debounced prices immediately and go to page 1
   function handleApplyFilters() {
+    setDebouncedMinPrice(filterMinPrice);
+    setDebouncedMaxPrice(filterMaxPrice);
     setPage(1);
   }
 
-  function handleClearFilters() {
+  // Reset every filter and the search box
+  function handleClearAll() {
+    setSearch('');
+    setDebouncedSearch('');
     setFilterType('');
     setFilterDistrict('');
     setFilterMinPrice('');
     setFilterMaxPrice('');
+    setDebouncedMinPrice('');
+    setDebouncedMaxPrice('');
     setFilterBeds('');
     setPage(1);
   }
@@ -122,10 +163,7 @@ export default function PublicPropertiesPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by property name, features, city, or Kigali district..."
             className="flex-1 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           />
@@ -138,15 +176,18 @@ export default function PublicPropertiesPage() {
               {showFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
             <button
-              onClick={() => {
-                setSearch('');
-                setPage(1);
-              }}
+              onClick={handleClearAll}
               className="border border-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-wide px-4 py-3 rounded-lg hover:border-brand-teal hover:text-brand-teal transition-colors"
             >
               Clear
             </button>
-            <button className="bg-brand-teal text-white text-xs font-semibold uppercase tracking-wide px-5 py-3 rounded-lg hover:opacity-90 transition-opacity">
+            <button
+              onClick={() => {
+                setDebouncedSearch(search);
+                setPage(1);
+              }}
+              className="bg-brand-teal text-white text-xs font-semibold uppercase tracking-wide px-5 py-3 rounded-lg hover:opacity-90 transition-opacity"
+            >
               Search Properties
             </button>
           </div>
@@ -233,7 +274,7 @@ export default function PublicPropertiesPage() {
 
             <div className="flex items-center justify-between pt-2">
               <button
-                onClick={handleClearFilters}
+                onClick={handleClearAll}
                 className="text-sm text-gray-500 underline hover:text-gray-700"
               >
                 Clear Filters

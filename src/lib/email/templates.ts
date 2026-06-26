@@ -262,6 +262,74 @@ export async function sendLeaseExpiryEmail({
   );
 }
 
+export async function sendPropertyApprovedEmail({
+  name,
+  email,
+  propertyTitle,
+}: {
+  name: string;
+  email: string;
+  propertyTitle: string;
+}) {
+  await send(
+    email,
+    'Your property is now live on HausLink!',
+    `<p>Hi ${name},</p>
+     <p>Great news — your property <strong>${propertyTitle}</strong> has been reviewed and is now live on HausLink!</p>
+     <p>Tenants can now find and apply for your listing.</p>
+     <p><a href="https://hauselink.com/properties">View on HausLink</a></p>
+     <p>— The HausLink Team</p>`
+  );
+}
+
+export async function sendNewApplicationEmail({
+  landlordName,
+  landlordEmail,
+  tenantName,
+  propertyTitle,
+  applicationLink,
+}: {
+  landlordName: string;
+  landlordEmail: string;
+  tenantName: string;
+  propertyTitle: string;
+  applicationLink: string;
+}) {
+  await send(
+    landlordEmail,
+    `New rental application for ${propertyTitle}`,
+    `<p>Hi ${landlordName},</p>
+     <p><strong>${tenantName}</strong> has submitted a rental application for your property <strong>${propertyTitle}</strong>.</p>
+     <p>Log in to review and respond to the application.</p>
+     <p><a href="${applicationLink}">Review Application</a></p>
+     <p>— The HausLink Team</p>`
+  );
+}
+
+export async function sendKYCSubmittedAdminEmail({
+  userName,
+  userEmail,
+  userRole,
+  documentType,
+}: {
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  documentType: string;
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'afriprimeholdings@gmail.com';
+  await send(
+    adminEmail,
+    'New KYC submission requires review',
+    `<p>A new KYC document has been submitted and requires your review.</p>
+     <p><strong>Name:</strong> ${userName}</p>
+     <p><strong>Email:</strong> ${userEmail}</p>
+     <p><strong>Role:</strong> ${userRole}</p>
+     <p><strong>Document:</strong> ${documentType}</p>
+     <p><a href="https://hauselink.com/admin/kyc">Review on HausLink Admin</a></p>`
+  );
+}
+
 export async function sendContactFormEmail({
   name,
   email,

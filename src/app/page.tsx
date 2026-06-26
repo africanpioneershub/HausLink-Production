@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Building2, Wallet, Wrench, Star } from 'lucide-react';
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
@@ -100,6 +101,7 @@ const TESTIMONIALS = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(FILTER_TABS[0]);
   const [search, setSearch] = useState('');
   const [featuredProperties, setFeaturedProperties] = useState<PropertyCardData[]>([]);
@@ -238,11 +240,19 @@ export default function Home() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    router.push(`/properties?search=${encodeURIComponent(search.trim())}`);
+                  }
+                }}
                 placeholder="Search by property name, features, city, or Kigali district..."
                 className="flex-1 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               />
               <div className="flex gap-2">
-                <button className="border border-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-wide px-4 py-3 rounded-lg hover:border-brand-teal hover:text-brand-teal transition-colors">
+                <button
+                  onClick={() => router.push('/properties')}
+                  className="border border-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-wide px-4 py-3 rounded-lg hover:border-brand-teal hover:text-brand-teal transition-colors"
+                >
                   Advanced Filters
                 </button>
                 <button
@@ -251,7 +261,10 @@ export default function Home() {
                 >
                   Clear
                 </button>
-                <button className="bg-brand-teal text-white text-xs font-semibold uppercase tracking-wide px-5 py-3 rounded-lg hover:opacity-90 transition-opacity">
+                <button
+                  onClick={() => router.push(`/properties?search=${encodeURIComponent(search.trim())}`)}
+                  className="bg-brand-teal text-white text-xs font-semibold uppercase tracking-wide px-5 py-3 rounded-lg hover:opacity-90 transition-opacity"
+                >
                   Search Properties
                 </button>
               </div>

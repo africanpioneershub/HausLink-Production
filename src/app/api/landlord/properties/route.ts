@@ -46,6 +46,20 @@ export const POST = withAuth(['LANDLORD'])(
       );
     }
 
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (dbUser?.kyc_status !== 'APPROVED') {
+      return NextResponse.json(
+        { success: false, error: 'KYC verification required before listing properties', code: 'KYC_REQUIRED' },
+        { status: 403 }
+      );
+    }
+    if (!dbUser?.registration_paid) {
+      return NextResponse.json(
+        { success: false, error: 'Registration fee payment required before listing properties', code: 'PAYMENT_REQUIRED' },
+        { status: 403 }
+      );
+    }
+
     const property = await prisma.property.create({
       data: {
         landlord_id: user.id,

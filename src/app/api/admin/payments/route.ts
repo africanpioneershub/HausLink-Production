@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
-import { PLATFORM_FEE_PCT } from '@/lib/constants';
 
 export const GET = withAuth(['ADMIN'])(
   async () => {
@@ -28,7 +27,9 @@ export const GET = withAuth(['ADMIN'])(
       ]);
 
     const totalRevenue = totalRevenueAgg._sum.amount_rwf ?? 0;
-    const platformFees = Math.round(totalRevenue * PLATFORM_FEE_PCT);
+    const config = await prisma.platformConfig.findFirst();
+    const feePct = config?.transaction_fee_pct ? Number(config.transaction_fee_pct) : 0.02;
+    const platformFees = Math.round(Number(totalRevenue) * feePct);
 
     const monthlyRevenue = new Map<string, number>();
     for (let i = 0; i < 6; i++) {

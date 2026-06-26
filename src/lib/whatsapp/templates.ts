@@ -178,6 +178,38 @@ export async function sendWhatsAppLeaseExpiry({
   });
 }
 
+export async function sendWhatsAppPropertyApproved({
+  phone,
+  name,
+  propertyTitle,
+}: {
+  phone: string;
+  name: string;
+  propertyTitle: string;
+}) {
+  await sendWhatsAppMessage({
+    to: phone,
+    text: `Great news ${name}! 🏠✅\nYour property "${propertyTitle}" is now live on HausLink!\nTenants can now find and apply.\nhauselink.com/properties`,
+  });
+}
+
+export async function sendWhatsAppNewApplication({
+  phone,
+  landlordName,
+  tenantName,
+  propertyTitle,
+}: {
+  phone: string;
+  landlordName: string;
+  tenantName: string;
+  propertyTitle: string;
+}) {
+  await sendWhatsAppMessage({
+    to: phone,
+    text: `Hi ${landlordName} 📋\n${tenantName} has applied for your property "${propertyTitle}".\nLog in to review their application.\nhauselink.com/landlord/applications`,
+  });
+}
+
 export async function sendWhatsAppContactConfirmation({
   phone,
   name,

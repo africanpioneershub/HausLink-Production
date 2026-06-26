@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
+import { sendKYCSubmittedAdminEmail } from '@/lib/email/templates';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -58,6 +59,13 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
       );
     }
 
+    if (user.kyc_status === 'APPROVED') {
+      return NextResponse.json(
+        { success: false, error: 'Your identity is already verified', code: 'ALREADY_VERIFIED' },
+        { status: 400 }
+      );
+    }
+
     const storagePath = `${user.email}/${documentType}/${file.name}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
@@ -93,6 +101,13 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
     await supabaseAdmin.auth.admin.updateUserById(userId, {
       user_metadata: { ...authUserData.user?.user_metadata, kyc_status: 'PENDING' },
     });
+
+    sendKYCSubmittedAdminEmail({
+      userName: user.name ?? user.email,
+      userEmail: user.email,
+      userRole: user.role,
+      documentType,
+    }).catch((error) => console.error('[kyc submit] Admin notification failed', error));
 
     return NextResponse.json(
       { success: true, data: { id: document.id, storage_path: storagePath } },

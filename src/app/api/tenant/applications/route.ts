@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
+import { sendNewApplicationEmail } from '@/lib/email/templates';
+import { sendWhatsAppNewApplication } from '@/lib/whatsapp/templates';
 
 const createApplicationSchema = z.object({ property_id: z.string() });
 
@@ -61,6 +63,31 @@ export const POST = withAuth(['TENANT'])(
         property_id: property.id,
       },
     });
+
+    const [landlord, tenant] = await Promise.all([
+      prisma.user.findUnique({ where: { id: property.landlord_id } }),
+      prisma.user.findUnique({ where: { id: user.id } }),
+    ]);
+
+    if (landlord) {
+      sendNewApplicationEmail({
+        landlordName: landlord.name ?? 'there',
+        landlordEmail: landlord.email,
+        tenantName: tenant?.name ?? 'A tenant',
+        propertyTitle: property.title,
+        applicationLink: 'https://hauselink.com/landlord/applications',
+      }).catch((error) => console.error('[application create] Email failed', error));
+
+      const waPhone = landlord.whatsapp ?? landlord.phone;
+      if (waPhone) {
+        sendWhatsAppNewApplication({
+          phone: waPhone,
+          landlordName: landlord.name ?? 'there',
+          tenantName: tenant?.name ?? 'A tenant',
+          propertyTitle: property.title,
+        }).catch((error) => console.error('[application create] WhatsApp failed', error));
+      }
+    }
 
     return NextResponse.json({ success: true, data: application }, { status: 201 });
   }

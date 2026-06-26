@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma/client';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { PLATFORM_FEE_PCT } from '@/lib/constants';
 import { sendRentPaidEmail } from '@/lib/email/templates';
 import { sendWhatsAppRentPaid } from '@/lib/whatsapp/templates';
 
@@ -27,8 +26,11 @@ export async function completePayment(
   if (!payment) return null;
   if (payment.status === 'COMPLETED') return payment;
 
+  const config = await prisma.platformConfig.findFirst();
+  const feePct = config?.transaction_fee_pct ? Number(config.transaction_fee_pct) : 0.02;
+
   const grossAmount = payment.amount_rwf;
-  const platformFee = Math.round(grossAmount * PLATFORM_FEE_PCT);
+  const platformFee = Math.round(Number(grossAmount) * feePct);
   const netAmount = grossAmount - platformFee;
 
   await prisma.$transaction([
