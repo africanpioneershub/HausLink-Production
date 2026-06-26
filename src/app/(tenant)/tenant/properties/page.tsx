@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Heart } from 'lucide-react';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
 
@@ -43,6 +44,8 @@ export default function TenantPropertiesPage() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [kycStatus, setKycStatus] = useState<KycStatus>('NOT_SUBMITTED');
   const [kycModal, setKycModal] = useState<KycStatus | null>(null);
 
@@ -52,7 +55,39 @@ export default function TenantPropertiesPage() {
       .then((json) => {
         if (json.success) setKycStatus(json.data.kyc_status);
       });
+
+    fetch('/api/tenant/saved')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setSavedIds(new Set(json.data.map((s: { property: { id: string } }) => s.property.id)));
+        }
+      });
   }, []);
+
+  async function toggleSave(propertyId: string) {
+    const isSaved = savedIds.has(propertyId);
+    setSavingId(propertyId);
+    try {
+      if (isSaved) {
+        await fetch(`/api/tenant/saved?property_id=${propertyId}`, { method: 'DELETE' });
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(propertyId);
+          return next;
+        });
+      } else {
+        await fetch('/api/tenant/saved', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_id: propertyId }),
+        });
+        setSavedIds((prev) => new Set(Array.from(prev).concat(propertyId)));
+      }
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   async function handleApply(propertyId: string) {
     if (kycStatus !== 'APPROVED') {
@@ -173,7 +208,7 @@ export default function TenantPropertiesPage() {
               key={p.id}
               className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
-              <div className="h-36 bg-gray-100">
+              <div className="relative h-36 bg-gray-100">
                 {p.images[0] && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -182,6 +217,16 @@ export default function TenantPropertiesPage() {
                     className="w-full h-full object-cover"
                   />
                 )}
+                <button
+                  onClick={() => toggleSave(p.id)}
+                  disabled={savingId === p.id}
+                  className={cn(
+                    'absolute top-2 right-2 p-1.5 rounded-full bg-white shadow-sm transition-colors disabled:opacity-50',
+                    savedIds.has(p.id) ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-400'
+                  )}
+                >
+                  <Heart className="w-4 h-4" fill={savedIds.has(p.id) ? 'currentColor' : 'none'} />
+                </button>
               </div>
               <div className="p-4">
                 <Link

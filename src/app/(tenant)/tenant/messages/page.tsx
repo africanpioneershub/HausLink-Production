@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { MessageSquarePlus, X } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
@@ -21,6 +22,11 @@ interface MessageItem {
   read_at: string | null;
 }
 
+interface TenancyOption {
+  property_id: string;
+  property_title: string;
+}
+
 export default function TenantMessagesPage() {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +35,10 @@ export default function TenantMessagesPage() {
   const [messageBody, setMessageBody] = useState('');
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [tenancies, setTenancies] = useState<TenancyOption[]>([]);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [newPropertyId, setNewPropertyId] = useState('');
+  const [startingConv, setStartingConv] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,6 +53,14 @@ export default function TenantMessagesPage() {
       .auth.getUser()
       .then(({ data }: { data: { user: { id: string } | null } }) => {
         setCurrentUserId(data.user?.id ?? null);
+      });
+
+    fetch('/api/tenant/tenancy')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setTenancies([{ property_id: json.data.property_id, property_title: json.data.property?.title ?? 'My Property' }]);
+        }
       });
   }, []);
 
@@ -112,24 +130,57 @@ export default function TenantMessagesPage() {
     }
   }
 
-  const selectedConversation = conversations.find((c) => c.id === selectedId);
-
-  if (!loading && conversations.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">No Conversations Yet</h2>
-        <p className="text-sm text-gray-500 max-w-sm">
-          Messages with landlords will appear here once you apply for or move into a property.
-        </p>
-      </div>
-    );
+  async function startConversation() {
+    if (!newPropertyId) return;
+    setStartingConv(true);
+    try {
+      const res = await fetch('/api/tenant/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_id: newPropertyId }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        const convId = json.data.id;
+        const exists = conversations.find((c) => c.id === convId);
+        if (!exists) {
+          const refreshed = await fetch('/api/tenant/messages').then((r) => r.json());
+          if (refreshed.success) setConversations(refreshed.data);
+        }
+        setSelectedId(convId);
+        setShowNewModal(false);
+        setNewPropertyId('');
+      }
+    } finally {
+      setStartingConv(false);
+    }
   }
 
+  const selectedConversation = conversations.find((c) => c.id === selectedId);
+
   return (
+    <>
     <div className="flex h-[calc(100vh-4rem)] -m-6 lg:-m-8 bg-white">
-      <div className="w-80 shrink-0 border-r border-gray-100 overflow-y-auto">
+      <div className="w-80 shrink-0 border-r border-gray-100 flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-700">Messages</p>
+          {tenancies.length > 0 && (
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="flex items-center gap-1 text-xs font-medium text-brand-teal hover:opacity-80"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              New
+            </button>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto">
         {loading ? (
           <p className="text-sm text-gray-500 p-4">Loading…</p>
+        ) : conversations.length === 0 ? (
+          <div className="p-4 text-center">
+            <p className="text-sm text-gray-500 mb-3">No conversations yet.</p>
+          </div>
         ) : (
           conversations.map((c) => (
             <button
@@ -157,6 +208,7 @@ export default function TenantMessagesPage() {
             </button>
           ))
         )}
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col">
@@ -215,5 +267,38 @@ export default function TenantMessagesPage() {
         )}
       </div>
     </div>
+
+    {showNewModal && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900">Message Landlord</h2>
+            <button onClick={() => setShowNewModal(false)}>
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+          <select
+            value={newPropertyId}
+            onChange={(e) => setNewPropertyId(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm mb-4"
+          >
+            <option value="">Select a property…</option>
+            {tenancies.map((t) => (
+              <option key={t.property_id} value={t.property_id}>
+                {t.property_title}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={startConversation}
+            disabled={!newPropertyId || startingConv}
+            className="w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
+          >
+            {startingConv ? 'Starting…' : 'Start Conversation'}
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

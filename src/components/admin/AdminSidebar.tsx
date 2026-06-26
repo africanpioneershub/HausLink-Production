@@ -13,6 +13,7 @@ import {
   MessageSquare,
   BarChart3,
   Flag,
+  ClipboardList,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { label: 'Reports & Flags', href: '/admin/reports', icon: Flag },
+  { label: 'Audit Log', href: '/admin/audit-log', icon: ClipboardList },
   { label: 'Platform Settings', href: '/admin/settings', icon: Settings },
 ];
 

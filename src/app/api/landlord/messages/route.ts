@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
+import { z } from 'zod';
+
+const newConversationSchema = z.object({
+  tenant_id: z.string().uuid(),
+  property_id: z.string().uuid(),
+});
+
 
 export const GET = withAuth(['LANDLORD'])(
   async (_request, _context, user) => {
@@ -35,5 +42,43 @@ export const GET = withAuth(['LANDLORD'])(
     );
 
     return NextResponse.json({ success: true, data });
+  }
+);
+
+export const POST = withAuth(['LANDLORD'])(
+  async (request, _context, user) => {
+    const body = await request.json().catch(() => null);
+    const parsed = newConversationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
+
+    const { tenant_id, property_id } = parsed.data;
+
+    const property = await prisma.property.findFirst({
+      where: { id: property_id, landlord_id: user.id },
+    });
+    if (!property) {
+      return NextResponse.json(
+        { success: false, error: 'Property not found', code: 'NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    const existing = await prisma.conversation.findFirst({
+      where: { tenant_id, landlord_id: user.id, property_id },
+    });
+    if (existing) {
+      return NextResponse.json({ success: true, data: existing });
+    }
+
+    const conversation = await prisma.conversation.create({
+      data: { tenant_id, landlord_id: user.id, property_id },
+    });
+
+    return NextResponse.json({ success: true, data: conversation }, { status: 201 });
   }
 );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ClipboardList, Loader2, Siren } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardList, Loader2, Plus, Siren, X } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate } from '@/lib/utils';
 import type {
@@ -31,11 +31,31 @@ const PRIORITY_BADGE: Record<MaintenancePriority, string> = {
 
 const STATUS_OPTIONS: MaintenanceStatus[] = ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 
+const CATEGORIES: MaintenanceCategory[] = [
+  'PLUMBING', 'ELECTRICAL', 'HVAC', 'STRUCTURAL', 'APPLIANCE', 'CLEANING', 'SECURITY', 'OTHER',
+];
+
+const PRIORITIES: MaintenancePriority[] = ['LOW', 'MEDIUM', 'HIGH', 'EMERGENCY'];
+
+interface PropertyOption {
+  id: string;
+  title: string;
+}
+
 export default function LandlordMaintenancePage() {
   const [requests, setRequests] = useState<LandlordMaintenanceItem[]>([]);
   const [kpis, setKpis] = useState({ total: 0, open: 0, inProgress: 0, resolved: 0, emergency: 0 });
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formTitle, setFormTitle] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formCategory, setFormCategory] = useState<MaintenanceCategory>('OTHER');
+  const [formPriority, setFormPriority] = useState<MaintenancePriority>('MEDIUM');
+  const [formPropertyId, setFormPropertyId] = useState('');
 
   useEffect(() => {
     fetch('/api/landlord/maintenance')
@@ -47,6 +67,14 @@ export default function LandlordMaintenancePage() {
         }
       })
       .finally(() => setLoading(false));
+
+    fetch('/api/landlord/properties')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setProperties(json.data.properties.map((p: { id: string; title: string }) => ({ id: p.id, title: p.title })));
+        }
+      });
   }, []);
 
   async function handleStatusChange(id: string, status: MaintenanceStatus) {
@@ -66,9 +94,49 @@ export default function LandlordMaintenancePage() {
     }
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (!formPropertyId) { setFormError('Please select a property.'); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/landlord/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formTitle,
+          description: formDescription,
+          category: formCategory,
+          priority: formPriority,
+          property_id: formPropertyId,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        const refreshed = await fetch('/api/landlord/maintenance').then((r) => r.json());
+        if (refreshed.success) { setRequests(refreshed.data.requests); setKpis(refreshed.data.kpis); }
+        setShowForm(false);
+        setFormTitle(''); setFormDescription(''); setFormCategory('OTHER'); setFormPriority('MEDIUM'); setFormPropertyId('');
+      } else {
+        setFormError(json.error ?? 'Failed to submit request.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 bg-brand-teal text-white text-sm font-medium px-3 py-2 rounded-lg hover:opacity-90 transition-opacity"
+        >
+          <Plus className="w-4 h-4" />
+          Report Issue
+        </button>
+      </div>
 
       {kpis.emergency > 0 && (
         <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
@@ -130,6 +198,53 @@ export default function LandlordMaintenancePage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900">Report a Maintenance Issue</h2>
+              <button onClick={() => setShowForm(false)}><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
+                <select value={formPropertyId} onChange={(e) => setFormPropertyId(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                  <option value="">Select a property…</option>
+                  {properties.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="Brief description of the issue" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="Provide more details…" rows={3} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none" required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as MaintenanceCategory)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select value={formPriority} onChange={(e) => setFormPriority(e.target.value as MaintenancePriority)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                    {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+              {formError && <p className="text-sm text-red-600">{formError}</p>}
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                <button type="submit" disabled={submitting} className="flex-1 bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50 text-sm">{submitting ? 'Submitting…' : 'Submit'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

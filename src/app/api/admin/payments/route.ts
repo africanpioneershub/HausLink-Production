@@ -50,6 +50,7 @@ export const GET = withAuth(['ADMIN'])(
         kpis: {
           totalRevenue,
           platformFees,
+          feePct,
           totalTransactions,
           pendingAmount: pendingAgg._sum.amount_rwf ?? 0,
           failedCount24h,

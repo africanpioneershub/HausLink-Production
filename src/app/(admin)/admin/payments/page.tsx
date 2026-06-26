@@ -44,6 +44,7 @@ export default function AdminPaymentsPage() {
   const [kpis, setKpis] = useState({
     totalRevenue: 0,
     platformFees: 0,
+    feePct: 0.02,
     totalTransactions: 0,
     pendingAmount: 0,
     failedCount24h: 0,
@@ -104,7 +105,7 @@ export default function AdminPaymentsPage() {
           colorScheme="teal"
         />
         <KpiCard
-          label="Platform Fees (2%)"
+          label={`Platform Fees (${(kpis.feePct * 100).toFixed(1).replace(/\.0$/, '')}%)`}
           value={formatRwf(kpis.platformFees)}
           icon={Percent}
           colorScheme="gold"

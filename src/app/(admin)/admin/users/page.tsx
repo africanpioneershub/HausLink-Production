@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Briefcase, ShieldAlert, UserCheck, Users } from 'lucide-react';
+import { Briefcase, ShieldAlert, UserCheck, Users, X } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate } from '@/lib/utils';
 
@@ -35,6 +35,23 @@ const STATUS_BADGE: Record<string, string> = {
   SUSPENDED: 'bg-gray-100 text-gray-700',
 };
 
+const KYC_BADGE: Record<string, string> = {
+  NOT_SUBMITTED: 'bg-gray-100 text-gray-600',
+  PENDING: 'bg-yellow-100 text-yellow-700',
+  APPROVED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
+};
+
+interface UserDetail {
+  user: {
+    id: string; name: string | null; email: string; role: string; status: string;
+    kyc_status: string; city: string | null; district: string | null; phone: string | null; created_at: string;
+  };
+  propertyCount: number;
+  applicationCount: number;
+  recentAudit: { id: string; action: string; entity_type: string; created_at: string }[];
+}
+
 export default function AdminUsersPage() {
   const [tab, setTab] = useState<TabKey>('ALL');
   const [searchInput, setSearchInput] = useState('');
@@ -49,6 +66,8 @@ export default function AdminUsersPage() {
   });
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
@@ -107,6 +126,17 @@ export default function AdminUsersPage() {
       loadUsers();
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function openUserDetail(userId: string) {
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`);
+      const json = await res.json();
+      if (json.success) setViewingUser(json.data);
+    } finally {
+      setDetailLoading(false);
     }
   }
 
@@ -179,6 +209,12 @@ export default function AdminUsersPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => openUserDetail(u.id)}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                >
+                  View
+                </button>
+                <button
                   onClick={() => handleApproveRegistration(u.id)}
                   disabled={busyId === u.id}
                   className="text-sm font-medium text-green-600 hover:text-green-700 disabled:opacity-50"
@@ -207,6 +243,12 @@ export default function AdminUsersPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => openUserDetail(u.id)}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                >
+                  View
+                </button>
                 <span
                   className={cn(
                     'text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full',
@@ -239,6 +281,72 @@ export default function AdminUsersPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {(viewingUser || detailLoading) && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900">User Details</h2>
+              <button onClick={() => setViewingUser(null)}><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            {detailLoading ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : viewingUser ? (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-brand-teal/10 flex items-center justify-center text-brand-teal font-bold text-sm shrink-0">
+                    {(viewingUser.user.name ?? viewingUser.user.email)[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{viewingUser.user.name ?? viewingUser.user.email}</p>
+                    <p className="text-sm text-gray-500">{viewingUser.user.email}</p>
+                    {viewingUser.user.phone && <p className="text-xs text-gray-400">{viewingUser.user.phone}</p>}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs font-semibold bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded-full">{viewingUser.user.role}</span>
+                  <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', STATUS_BADGE[viewingUser.user.status])}>{viewingUser.user.status}</span>
+                  <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', KYC_BADGE[viewingUser.user.kyc_status])}>KYC: {viewingUser.user.kyc_status.replace('_', ' ')}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Location</p>
+                    <p className="font-medium text-gray-900 mt-0.5">{[viewingUser.user.district, viewingUser.user.city].filter(Boolean).join(', ') || '—'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Registered</p>
+                    <p className="font-medium text-gray-900 mt-0.5">{formatDate(viewingUser.user.created_at)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Properties</p>
+                    <p className="font-medium text-gray-900 mt-0.5">{viewingUser.propertyCount}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Applications</p>
+                    <p className="font-medium text-gray-900 mt-0.5">{viewingUser.applicationCount}</p>
+                  </div>
+                </div>
+
+                {viewingUser.recentAudit.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Recent Activity</p>
+                    <div className="space-y-1">
+                      {viewingUser.recentAudit.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700">{entry.action.replace(/_/g, ' ')}</span>
+                          <span className="text-gray-400">{formatDate(entry.created_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
     </div>
