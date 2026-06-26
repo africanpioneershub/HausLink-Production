@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma/client';
 import { sendContactFormEmail } from '@/lib/email/templates';
 import { sendWhatsAppContactConfirmation } from '@/lib/whatsapp/templates';
 import { authRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
@@ -41,23 +40,6 @@ export async function POST(request: Request) {
   }
 
   const { name, email, subject, message, phone } = parsed.data;
-
-  try {
-    await prisma.reportFlag.create({
-      data: {
-        type: 'DOCUMENTS',
-        description: `Contact form submission\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`,
-      },
-    });
-  } catch (dbError) {
-    console.error('[contact] Failed to persist contact submission, logging instead:', {
-      name,
-      email,
-      subject,
-      message,
-      error: dbError,
-    });
-  }
 
   sendContactFormEmail({ name, email, subject, message }).catch((error) =>
     console.error('[contact] Email failed', error)

@@ -31,7 +31,7 @@ export async function sendWhatsAppAccountApproved({
 
   await sendWhatsAppMessage({
     to: phone,
-    text: `Your account has been approved! ✅\nYou can now log in to HausLink.\n${nextStep}\nhauslink.rw`,
+    text: `Your account has been approved! ✅\nYou can now log in to HausLink.\n${nextStep}\nhauselink.com`,
   });
 }
 
@@ -59,7 +59,7 @@ export async function sendWhatsAppKYCApproved({
 }) {
   await sendWhatsAppMessage({
     to: phone,
-    text: `Great news ${name}! ✅\nYour HausLink account is now verified.\nYou can now log in and start using the platform.\nhauslink.rw`,
+    text: `Great news ${name}! ✅\nYour HausLink account is now verified.\nYou can now log in and start using the platform.\nhauselink.com`,
   });
 }
 
@@ -94,7 +94,7 @@ export async function sendWhatsAppApplicationStatus({
   const text =
     status === 'APPROVED'
       ? `Congratulations ${tenantName}! 🎉\nYour application for ${propertyTitle} has been approved!\nLog in to view your tenancy details.`
-      : `Hi ${tenantName}, your application for ${propertyTitle} was not approved.\nReason: ${reason ?? 'Not specified'}\nBrowse other properties at hauslink.rw`;
+      : `Hi ${tenantName}, your application for ${propertyTitle} was not approved.\nReason: ${reason ?? 'Not specified'}\nBrowse other properties at hauselink.com`;
 
   await sendWhatsAppMessage({ to: phone, text });
 }
@@ -114,7 +114,7 @@ export async function sendWhatsAppRentDue({
 }) {
   await sendWhatsAppMessage({
     to: phone,
-    text: `Hi ${tenantName} 📅\nReminder: RWF ${amount.toLocaleString('en-US')} rent is due for ${propertyTitle}\nDue date: ${dueDate}\nPay via MTN MoMo, Airtel, or Stripe on hauslink.rw`,
+    text: `Hi ${tenantName} 📅\nReminder: RWF ${amount.toLocaleString('en-US')} rent is due for ${propertyTitle}\nDue date: ${dueDate}\nPay via MTN MoMo, Airtel, or Stripe on hauselink.com`,
   });
 }
 

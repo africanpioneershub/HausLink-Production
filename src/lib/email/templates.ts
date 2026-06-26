@@ -94,7 +94,7 @@ export async function sendKYCApprovedEmail({
     'Your HausLink account is verified!',
     `<p>Hi ${name},</p>
      <p>Great news — your identity verification has been approved. Your HausLink account is now fully active.</p>
-     <p><a href="https://hauslink.rw/login">Log in to HausLink</a></p>
+     <p><a href="https://hauselink.com/login">Log in to HausLink</a></p>
      <p>— The HausLink Team</p>`
   );
 }
@@ -140,7 +140,7 @@ export async function sendApplicationStatusEmail({
          <p>Log in to view your tenancy details.</p>`
       : `<p>Your application for <strong>${propertyTitle}</strong> was not approved.</p>
          ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
-         <p>Browse other properties at hauslink.rw.</p>`;
+         <p>Browse other properties at <a href="https://hauselink.com/properties">hauselink.com</a>.</p>`;
 
   await send(
     tenantEmail,
@@ -169,7 +169,7 @@ export async function sendRentDueEmail({
     `<p>Hi ${tenantName},</p>
      <p>This is a reminder that rent of RWF ${amount.toLocaleString('en-US')} for
      <strong>${propertyTitle}</strong> is due on ${dueDate}.</p>
-     <p>Pay via MTN MoMo, Airtel Money, or Stripe on hauslink.rw.</p>
+     <p>Pay via MTN MoMo, Airtel Money, or Stripe on <a href="https://hauselink.com">hauselink.com</a>.</p>
      <p>— The HausLink Team</p>`
   );
 }
@@ -326,7 +326,7 @@ export async function sendKYCSubmittedAdminEmail({
      <p><strong>Email:</strong> ${userEmail}</p>
      <p><strong>Role:</strong> ${userRole}</p>
      <p><strong>Document:</strong> ${documentType}</p>
-     <p><a href="https://hauselink.com/admin/kyc">Review on HausLink Admin</a></p>`
+     <p><a href="https://hauselink.com/admin/properties">Review on HausLink Admin</a></p>`
   );
 }
 
