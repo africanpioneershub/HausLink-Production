@@ -22,6 +22,12 @@ export default async function PublicPropertyDetailPage({
 
   if (!property) notFound();
 
+  // Increment view count (fire-and-forget, don't block render)
+  prisma.property.update({
+    where: { id: params.id },
+    data: { view_count: { increment: 1 } },
+  }).catch(() => {});
+
   const supabase = createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const role = user?.user_metadata?.role as string | undefined;

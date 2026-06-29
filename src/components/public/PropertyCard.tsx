@@ -1,5 +1,8 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { BedDouble, Bath, Building2, Star, Eye, ImageOff, ArrowRight } from 'lucide-react';
+import { BedDouble, Bath, Building2, Star, Eye, ImageOff, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface PropertyCardData {
   id: string;
@@ -16,6 +19,7 @@ export interface PropertyCardData {
   featured: boolean;
   description: string;
   imageUrl?: string | null;
+  images?: string[];
 }
 
 function formatRwf(amount: number) {
@@ -23,18 +27,69 @@ function formatRwf(amount: number) {
 }
 
 export function PropertyCard({ property }: { property: PropertyCardData }) {
+  const allImages = property.images?.length
+    ? property.images
+    : property.imageUrl
+    ? [property.imageUrl]
+    : [];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  function prev(e: React.MouseEvent) {
+    e.preventDefault();
+    setCurrentIndex((i) => (i - 1 + allImages.length) % allImages.length);
+  }
+
+  function next(e: React.MouseEvent) {
+    e.preventDefault();
+    setCurrentIndex((i) => (i + 1) % allImages.length);
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden flex flex-col">
       <div
         role="img"
-        aria-label={property.imageUrl ? property.title : `No photo available for ${property.title}`}
+        aria-label={allImages.length ? property.title : `No photo available for ${property.title}`}
         className="relative h-[200px] bg-gray-200 flex items-center justify-center overflow-hidden"
       >
-        {property.imageUrl ? (
+        {allImages.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={property.imageUrl} alt={property.title} className="w-full h-full object-cover" />
+          <img
+            src={allImages[currentIndex]}
+            alt={property.title}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <ImageOff className="w-10 h-10 text-gray-400" />
+        )}
+
+        {allImages.length > 1 && (
+          <>
+            <button
+              onClick={prev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1 transition-colors"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={next}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1 transition-colors"
+              aria-label="Next image"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-1">
+              {allImages.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.preventDefault(); setCurrentIndex(i); }}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentIndex ? 'bg-white' : 'bg-white/50'}`}
+                  aria-label={`Image ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">

@@ -68,7 +68,7 @@ export async function GET(request: Request) {
         orderBy: { created_at: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: { images: { where: { is_primary: true }, take: 1 } },
+        include: { images: { orderBy: { display_order: 'asc' } } },
       }),
       prisma.property.count({ where }),
     ]);
@@ -87,6 +87,7 @@ export async function GET(request: Request) {
       is_verified: property.is_verified,
       featured: property.featured,
       imageUrl: property.images[0]?.cdn_url ?? property.images[0]?.storage_path ?? null,
+      images: property.images.map((img) => img.cdn_url ?? img.storage_path),
     }));
 
     result = { data, total, page, pageSize };

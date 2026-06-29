@@ -22,6 +22,7 @@ interface PublicPropertyApiItem {
   is_verified: boolean;
   featured: boolean;
   imageUrl: string | null;
+  images?: string[];
 }
 
 function toCardData(item: PublicPropertyApiItem): PropertyCardData {
@@ -40,6 +41,7 @@ function toCardData(item: PublicPropertyApiItem): PropertyCardData {
     featured: item.featured,
     description: item.description ?? '',
     imageUrl: item.imageUrl,
+    images: item.images,
   };
 }
 
@@ -108,9 +110,9 @@ export default function Home() {
   const [catalogProperties, setCatalogProperties] = useState<PropertyCardData[]>([]);
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [stats, setStats] = useState([
-    { value: '0+', label: 'Active Listings' },
-    { value: '0+', label: 'Verified Landlords' },
-    { value: '0+', label: 'Happy Tenants' },
+    { value: '0', label: 'Active Listings' },
+    { value: '0', label: 'Verified Landlords' },
+    { value: '0', label: 'Happy Tenants' },
     { value: '30', label: 'Districts Covered' },
   ]);
 
@@ -136,10 +138,11 @@ export default function Home() {
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {
+          const fmt = (n: number) => n > 0 ? `${n}+` : `${n}`;
           setStats([
-            { value: `${json.data.activeListings}+`, label: 'Active Listings' },
-            { value: `${json.data.verifiedLandlords}+`, label: 'Verified Landlords' },
-            { value: `${json.data.happyTenants}+`, label: 'Happy Tenants' },
+            { value: fmt(json.data.activeListings), label: 'Active Listings' },
+            { value: fmt(json.data.verifiedLandlords), label: 'Verified Landlords' },
+            { value: fmt(json.data.happyTenants), label: 'Happy Tenants' },
             { value: `${json.data.districtsCovered}`, label: 'Districts Covered' },
           ]);
         }

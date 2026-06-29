@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
 
@@ -32,6 +32,45 @@ const PROPERTY_TYPES: PropertyType[] = [
 ];
 
 const PAGE_SIZE = 12;
+
+function PropertyImageCarousel({ images, title }: { images: { cdn_url: string | null; storage_path: string }[]; title: string }) {
+  const [idx, setIdx] = useState(0);
+  if (images.length === 0) return <div className="w-full h-full bg-gray-200" />;
+  const src = images[idx]?.cdn_url ?? images[idx]?.storage_path;
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={title} className="w-full h-full object-cover" />
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.preventDefault(); setIdx((i) => (i - 1 + images.length) % images.length); }}
+            className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-0.5 transition-colors"
+            aria-label="Previous"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.preventDefault(); setIdx((i) => (i + 1) % images.length); }}
+            className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-0.5 transition-colors"
+            aria-label="Next"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.preventDefault(); setIdx(i); }}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? 'bg-white' : 'bg-white/50'}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
 
 export default function TenantPropertiesPage() {
   const [properties, setProperties] = useState<PropertyListItem[]>([]);
@@ -208,15 +247,8 @@ export default function TenantPropertiesPage() {
               key={p.id}
               className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
-              <div className="relative h-36 bg-gray-100">
-                {p.images[0] && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.images[0].cdn_url ?? p.images[0].storage_path}
-                    alt={p.title}
-                    className="w-full h-full object-cover"
-                  />
-                )}
+              <div className="relative h-36 bg-gray-100 overflow-hidden">
+                <PropertyImageCarousel images={p.images} title={p.title} />
                 <button
                   onClick={() => toggleSave(p.id)}
                   disabled={savingId === p.id}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Ban, Building2, CheckCircle2, Eye, ShieldCheck, Users } from 'lucide-react';
+import { Ban, Building2, CheckCircle2, Eye, Pencil, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate, formatRwf } from '@/lib/utils';
 
@@ -33,6 +33,15 @@ interface PendingPropertyItem {
   rent_rwf: number;
   created_at: string;
   landlord: { id: string; name: string | null; email: string };
+}
+
+interface EditForm {
+  title: string;
+  type: string;
+  district: string;
+  city: string;
+  rent_rwf: string;
+  status: string;
 }
 
 const PROPERTY_STATUS_FILTERS: { key: PropertyStatusFilter; label: string }[] = [
@@ -83,6 +92,8 @@ export default function AdminVerificationPage() {
   const [propertyStatusFilter, setPropertyStatusFilter] = useState<PropertyStatusFilter>('PENDING_APPROVAL');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editingProperty, setEditingProperty] = useState<PendingPropertyItem | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ title: '', type: '', district: '', city: '', rent_rwf: '', status: '' });
 
   function loadKyc(filter: KycFilter) {
     fetch(`/api/admin/kyc?status=${filter}`)
@@ -204,6 +215,52 @@ export default function AdminVerificationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
       });
+      loadProperties();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDeleteProperty(id: string) {
+    if (!window.confirm('Delete this property? This cannot be undone.')) return;
+    setBusyId(id);
+    try {
+      await fetch(`/api/admin/properties/${id}`, { method: 'DELETE' });
+      loadProperties();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function openEdit(p: PendingPropertyItem) {
+    setEditingProperty(p);
+    setEditForm({
+      title: p.title,
+      type: p.type,
+      district: p.district,
+      city: p.city,
+      rent_rwf: String(p.rent_rwf),
+      status: p.status,
+    });
+  }
+
+  async function handleSaveEdit() {
+    if (!editingProperty) return;
+    setBusyId(editingProperty.id);
+    try {
+      await fetch(`/api/admin/properties/${editingProperty.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editForm.title,
+          type: editForm.type,
+          district: editForm.district,
+          city: editForm.city,
+          rent_rwf: Number(editForm.rent_rwf),
+          status: editForm.status,
+        }),
+      });
+      setEditingProperty(null);
       loadProperties();
     } finally {
       setBusyId(null);
@@ -382,28 +439,130 @@ export default function AdminVerificationPage() {
                     </div>
                     <p className="font-semibold text-gray-900">{formatRwf(p.rent_rwf)}/mo</p>
                   </div>
-                  {p.status === 'PENDING_APPROVAL' && (
-                    <div className="flex items-center gap-3 mt-3">
-                      <button
-                        onClick={() => handleApproveProperty(p.id)}
-                        disabled={busyId === p.id}
-                        className="text-sm font-medium text-green-600 hover:text-green-700 disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleRejectProperty(p.id)}
-                        disabled={busyId === p.id}
-                        className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 mt-3">
+                    {p.status === 'PENDING_APPROVAL' && (
+                      <>
+                        <button
+                          onClick={() => handleApproveProperty(p.id)}
+                          disabled={busyId === p.id}
+                          className="text-sm font-medium text-green-600 hover:text-green-700 disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectProperty(p.id)}
+                          disabled={busyId === p.id}
+                          className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                        <span className="text-gray-200">|</span>
+                      </>
+                    )}
+                    <button
+                      onClick={() => openEdit(p)}
+                      disabled={busyId === p.id}
+                      className="flex items-center gap-1 text-sm font-medium text-brand-teal hover:text-brand-teal/80 disabled:opacity-50"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProperty(p.id)}
+                      disabled={busyId === p.id}
+                      className="flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+      {editingProperty && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">Edit Property</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500">Title</label>
+                <input
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Type</label>
+                  <select
+                    value={editForm.type}
+                    onChange={(e) => setEditForm((f) => ({ ...f, type: e.target.value }))}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  >
+                    {['APARTMENT','HOUSE','ROOM','STUDIO','VILLA','OFFICE','COMMERCIAL'].map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  >
+                    {['DRAFT','PENDING_APPROVAL','ACTIVE','OCCUPIED','INACTIVE'].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">District</label>
+                  <input
+                    value={editForm.district}
+                    onChange={(e) => setEditForm((f) => ({ ...f, district: e.target.value }))}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">City</label>
+                  <input
+                    value={editForm.city}
+                    onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500">Rent (RWF/mo)</label>
+                <input
+                  type="number"
+                  value={editForm.rent_rwf}
+                  onChange={(e) => setEditForm((f) => ({ ...f, rent_rwf: e.target.value }))}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleSaveEdit}
+                disabled={busyId === editingProperty.id}
+                className="flex-1 bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50"
+              >
+                {busyId === editingProperty.id ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button
+                onClick={() => setEditingProperty(null)}
+                className="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
