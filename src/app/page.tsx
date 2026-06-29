@@ -190,7 +190,7 @@ export default function Home() {
         </section>
 
         {/* Section 3 — Available Properties */}
-        <section id="features" className="bg-white border-t border-gray-100">
+        <section id="properties" className="bg-white border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
               <h2 className="text-3xl font-bold text-gray-900">Available Properties</h2>
@@ -258,7 +258,7 @@ export default function Home() {
         </section>
 
         {/* Section 4 — For Landlords */}
-        <section className="bg-[#1A2B40]">
+        <section id="features" className="bg-[#1A2B40]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
             <p className="text-xs font-bold uppercase tracking-wide text-white mb-2">
               For Landlords
