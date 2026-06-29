@@ -89,7 +89,7 @@ export default function AdminVerificationPage() {
     verifiedUsers: 0,
     totalProperties: 0,
   });
-  const [propertyStatusFilter, setPropertyStatusFilter] = useState<PropertyStatusFilter>('PENDING_APPROVAL');
+  const [propertyStatusFilter, setPropertyStatusFilter] = useState<PropertyStatusFilter>('ALL');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingProperty, setEditingProperty] = useState<PendingPropertyItem | null>(null);
