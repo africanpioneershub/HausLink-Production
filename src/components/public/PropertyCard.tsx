@@ -27,8 +27,16 @@ function formatRwf(amount: number) {
 }
 
 export function PropertyCard({ property }: { property: PropertyCardData }) {
-  const allImages = property.images?.length
-    ? property.images
+  // Cast through unknown: the declared type is string[] but stale Redis cache entries
+  // may arrive as a space-delimited string. The runtime guard splits them back into an array.
+  const rawImages = property.images as unknown;
+  const imagesArray: string[] = Array.isArray(rawImages)
+    ? (rawImages as string[])
+    : typeof rawImages === 'string' && rawImages.trim().length > 0
+    ? rawImages.trim().split(/\s+/)
+    : [];
+  const allImages = imagesArray.length
+    ? imagesArray
     : property.imageUrl
     ? [property.imageUrl]
     : [];
