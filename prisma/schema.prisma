@@ -90,6 +90,10 @@ model Property {
   saved_by      SavedProperty[]
   expenses      Expense[]
 
+  @@index([status])
+  @@index([landlord_id])
+  @@index([featured, status])
+  @@index([status, created_at])
   @@map("properties")
 }
 
@@ -126,6 +130,10 @@ model Application {
   landlord User     @relation("LandlordApplications", fields: [landlord_id], references: [id], onDelete: Cascade)
   property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
 
+  @@index([tenant_id])
+  @@index([landlord_id])
+  @@index([property_id])
+  @@index([status])
   @@map("applications")
 }
 
@@ -171,6 +179,10 @@ model Payment {
   tenancy      Tenancy?     @relation(fields: [tenancy_id], references: [id], onDelete: SetNull)
   ledger_entry LedgerEntry?
 
+  @@index([tenant_id])
+  @@index([landlord_id])
+  @@index([tenancy_id])
+  @@index([status])
   @@map("payments")
 }
 
@@ -334,5 +346,8 @@ model AuditLog {
   metadata    Json     @default("{}")
   created_at  DateTime @default(now())
 
+  @@index([action])
+  @@index([user_id])
+  @@index([created_at])
   @@map("audit_log")
 }

@@ -1,0 +1,27 @@
+import { createHmac, timingSafeEqual } from 'crypto';
+
+const SECRET = process.env.CSRF_SECRET ?? 'dev-csrf-secret-change-in-production';
+
+export function generateCsrfToken(): string {
+  const nonce = Math.random().toString(36).slice(2);
+  const ts = Date.now().toString(36);
+  const payload = `${nonce}:${ts}`;
+  const sig = createHmac('sha256', SECRET).update(payload).digest('hex');
+  return `${payload}:${sig}`;
+}
+
+export function validateCsrfToken(token: string): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split(':');
+  if (parts.length !== 3) return false;
+  const payload = `${parts[0]}:${parts[1]}`;
+  const expected = createHmac('sha256', SECRET).update(payload).digest('hex');
+  try {
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(parts[2], 'hex');
+    if (expectedBuf.length !== actualBuf.length) return false;
+    return timingSafeEqual(expectedBuf, actualBuf);
+  } catch {
+    return false;
+  }
+}

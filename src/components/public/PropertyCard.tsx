@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { BedDouble, Bath, Building2, Star, Eye, ImageOff, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface PropertyCardData {
@@ -61,11 +62,14 @@ export function PropertyCard({ property }: { property: PropertyCardData }) {
         className="relative h-[200px] bg-gray-200 flex items-center justify-center overflow-hidden"
       >
         {allImages.length > 0 ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
+            key={allImages[currentIndex]}
             src={allImages[currentIndex]}
             alt={property.title}
-            className="w-full h-full object-cover"
+            fill
+            unoptimized
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
           <ImageOff className="w-10 h-10 text-gray-400" />

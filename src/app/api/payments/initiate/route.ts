@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma/client';
 import { generateIdempotencyKey } from '@/lib/utils';
 import { initiateMoMoPayment } from '@/lib/payments/momo';
 import { initiateAirtelPayment } from '@/lib/payments/airtel';
+import { AUDIT_ACTIONS } from '@/lib/constants';
 
 const initiateSchema = z.object({
   tenancyId: z.string().min(1),
@@ -154,6 +155,17 @@ export const POST = withAuth(['TENANT'])(
       where: { id: payment.id },
       data: { txn_ref: result.transactionId },
     });
+
+    prisma.auditLog.create({
+      data: {
+        user_id: user.id,
+        action: AUDIT_ACTIONS.PAYMENT_INITIATED,
+        entity_type: 'Payment',
+        entity_id: payment.id,
+        ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined,
+        metadata: { method, amount, tenancy_id: tenancyId },
+      },
+    }).catch(() => {});
 
     return NextResponse.json(
       {

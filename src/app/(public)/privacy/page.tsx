@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 export default function PrivacyPage() {
   return (
     <div className="bg-white">

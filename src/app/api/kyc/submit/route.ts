@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { sendKYCSubmittedAdminEmail } from '@/lib/email/templates';
+import { AUDIT_ACTIONS } from '@/lib/constants';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -108,6 +109,17 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
       userRole: user.role,
       documentType,
     }).catch((error) => console.error('[kyc submit] Admin notification failed', error));
+
+    prisma.auditLog.create({
+      data: {
+        user_id: userId,
+        action: AUDIT_ACTIONS.KYC_SUBMITTED,
+        entity_type: 'KYCDocument',
+        entity_id: document.id,
+        ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined,
+        metadata: { documentType },
+      },
+    }).catch(() => {});
 
     return NextResponse.json(
       { success: true, data: { id: document.id, storage_path: storagePath } },

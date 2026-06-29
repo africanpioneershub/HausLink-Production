@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { sendContactFormEmail } from '@/lib/email/templates';
 import { sendWhatsAppContactConfirmation } from '@/lib/whatsapp/templates';
 import { contactRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
+import { sanitizeObject } from '@/lib/sanitize';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(150),
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, subject, message, phone } = parsed.data;
+  const { name, email, subject, message, phone } = sanitizeObject(parsed.data as Record<string, unknown>) as typeof parsed.data;
 
   sendContactFormEmail({ name, email, subject, message }).catch((error) =>
     console.error('[contact] Email failed', error)

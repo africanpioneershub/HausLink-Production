@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
+import { AUDIT_ACTIONS } from '@/lib/constants';
 
 const ROLES = ['TENANT', 'LANDLORD', 'ADMIN'] as const;
 
@@ -58,6 +59,17 @@ export const PATCH = withAuth([...ROLES])(
     }
 
     await deleteCache(CACHE_KEYS.userProfile(user.id));
+
+    prisma.auditLog.create({
+      data: {
+        user_id: user.id,
+        action: AUDIT_ACTIONS.PROFILE_UPDATED,
+        entity_type: 'User',
+        entity_id: user.id,
+        ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined,
+        metadata: { fields: Object.keys(parsed.data) },
+      },
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, data: updated });
   }

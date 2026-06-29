@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { Check } from 'lucide-react';
 
 const TENANT_FEATURES = [

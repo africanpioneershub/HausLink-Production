@@ -23,12 +23,16 @@ export async function GET(request: Request) {
   const cacheKey = `public:properties:${search ?? ''}:${type ?? ''}:${district ?? ''}:${minPrice ?? ''}:${maxPrice ?? ''}:${featured ?? ''}:${beds ?? ''}:${page}:${pageSize}`;
   const fallback = { data: [], total: 0, page, pageSize };
 
+  const cacheHeaders = {
+    'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+  };
+
   try {
     const cached = await getCache<{ data: unknown[]; total: number; page: number; pageSize: number }>(
       cacheKey
     );
     if (cached) {
-      return NextResponse.json({ success: true, data: cached });
+      return NextResponse.json({ success: true, data: cached }, { headers: cacheHeaders });
     }
   } catch (error) {
     console.error('[public/properties] Cache read failed', error);
@@ -102,5 +106,5 @@ export async function GET(request: Request) {
     console.error('[public/properties] Cache write failed', error);
   }
 
-  return NextResponse.json({ success: true, data: result });
+  return NextResponse.json({ success: true, data: result }, { headers: cacheHeaders });
 }

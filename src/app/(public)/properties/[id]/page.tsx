@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, BedDouble, Bath, Building2, ImageOff, MapPin, CalendarDays } from 'lucide-react';
 import { prisma } from '@/lib/prisma/client';
@@ -64,11 +65,14 @@ export default async function PublicPropertyDetailPage({
         {/* Image */}
         <div className="relative h-[360px] bg-gray-200 rounded-xl overflow-hidden flex items-center justify-center mb-6">
           {primaryImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={primaryImage.cdn_url ?? primaryImage.storage_path}
               alt={property.title}
-              className="w-full h-full object-cover"
+              fill
+              unoptimized
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1024px"
+              priority
             />
           ) : (
             <ImageOff className="w-16 h-16 text-gray-400" />
@@ -89,12 +93,14 @@ export default async function PublicPropertyDetailPage({
         {property.images.length > 1 && (
           <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
             {property.images.slice(1, 5).map((img) => (
-              <div key={img.id} className="shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <div key={img.id} className="shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100 relative">
+                <Image
                   src={img.cdn_url ?? img.storage_path}
                   alt=""
-                  className="w-full h-full object-cover"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="96px"
                 />
               </div>
             ))}

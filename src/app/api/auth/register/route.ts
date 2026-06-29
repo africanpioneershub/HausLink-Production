@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma/client';
 import { sendWelcomeEmail } from '@/lib/email/templates';
 import { sendWhatsAppWelcome } from '@/lib/whatsapp/templates';
 import { authRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
+import { sanitizeObject } from '@/lib/sanitize';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(150),
@@ -52,8 +53,9 @@ async function handleRegister(request: Request) {
     );
   }
 
+  const sanitized = sanitizeObject(parsed.data as Record<string, unknown>) as typeof parsed.data;
   const { name, email, password, role, phone, whatsapp, city, district, countryCode, whatsappCountryCode } =
-    parsed.data;
+    sanitized;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

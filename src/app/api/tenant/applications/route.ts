@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
 import { sendNewApplicationEmail } from '@/lib/email/templates';
 import { sendWhatsAppNewApplication } from '@/lib/whatsapp/templates';
+import { AUDIT_ACTIONS } from '@/lib/constants';
 
 const createApplicationSchema = z.object({ property_id: z.string() });
 
@@ -88,6 +89,17 @@ export const POST = withAuth(['TENANT'])(
         }).catch((error) => console.error('[application create] WhatsApp failed', error));
       }
     }
+
+    prisma.auditLog.create({
+      data: {
+        user_id: user.id,
+        action: AUDIT_ACTIONS.APPLICATION_SUBMITTED,
+        entity_type: 'Application',
+        entity_id: application.id,
+        ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined,
+        metadata: { property_id: property.id },
+      },
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, data: application }, { status: 201 });
   }

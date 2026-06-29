@@ -19,6 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://hauselink.supabase.co" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+      </head>
       <body className="bg-white text-gray-900 antialiased">
         {children}
       </body>

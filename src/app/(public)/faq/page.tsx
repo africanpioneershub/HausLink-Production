@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 const FAQS = [
   {
     question: 'How do I find a property on HausLink?',

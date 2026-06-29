@@ -29,6 +29,13 @@ export const contactRateLimit = new Ratelimit({
   prefix: 'rl:contact',
 });
 
+export const passwordResetRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, '60 s'),
+  analytics: true,
+  prefix: 'rl:password-reset',
+});
+
 export async function applyRateLimit(
   limiter: Ratelimit,
   identifier: string
