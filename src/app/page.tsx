@@ -111,7 +111,7 @@ export default function Home() {
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [stats, setStats] = useState([
     { value: '0', label: 'Active Listings' },
-    { value: '0', label: 'Verified Landlords' },
+    { value: '0', label: 'Active Landlords' },
     { value: '0', label: 'Happy Tenants' },
     { value: '30', label: 'Districts Covered' },
   ]);
@@ -141,7 +141,7 @@ export default function Home() {
           const fmt = (n: number) => n > 0 ? `${n}+` : `${n}`;
           setStats([
             { value: fmt(json.data.activeListings), label: 'Active Listings' },
-            { value: fmt(json.data.verifiedLandlords), label: 'Verified Landlords' },
+            { value: fmt(json.data.verifiedLandlords), label: 'Active Landlords' },
             { value: fmt(json.data.happyTenants), label: 'Happy Tenants' },
             { value: `${json.data.districtsCovered}`, label: 'Districts Covered' },
           ]);
