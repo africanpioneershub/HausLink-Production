@@ -5,6 +5,7 @@ import { MessageSquarePlus, X } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface ConversationListItem {
   id: string;
@@ -30,6 +31,7 @@ interface TenancyOption {
 }
 
 export default function LandlordMessagesPage() {
+  const csrf = useCsrf();
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export default function LandlordMessagesPage() {
     try {
       const res = await fetch(`/api/landlord/messages/${selectedId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ body: messageBody }),
       });
       const json = await res.json();
@@ -146,7 +148,7 @@ export default function LandlordMessagesPage() {
     try {
       const res = await fetch('/api/landlord/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ tenant_id, property_id }),
       });
       const json = await res.json();

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Flag, LifeBuoy, MessageCircle, MessageSquare } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface ConversationListItem {
   id: string;
@@ -23,6 +24,7 @@ interface MessageItem {
 }
 
 export default function AdminMessagesPage() {
+  const csrf = useCsrf();
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [kpis, setKpis] = useState({
     totalConversations: 0,
@@ -70,7 +72,7 @@ export default function AdminMessagesPage() {
     try {
       await fetch(`/api/admin/messages/${id}/flag`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ reason }),
       });
       loadConversations();

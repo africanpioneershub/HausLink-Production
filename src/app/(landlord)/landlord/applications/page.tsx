@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cn, formatDate } from '@/lib/utils';
 import type { ApplicationStatus } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface LandlordApplicationItem {
   id: string;
@@ -24,6 +25,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 export default function LandlordApplicationsPage() {
+  const csrf = useCsrf();
   const [applications, setApplications] = useState<LandlordApplicationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('ALL');
@@ -61,7 +63,7 @@ export default function LandlordApplicationsPage() {
   async function handleApprove(id: string) {
     setBusyId(id);
     try {
-      const res = await fetch(`/api/landlord/applications/${id}/approve`, { method: 'POST' });
+      const res = await fetch(`/api/landlord/applications/${id}/approve`, { method: 'POST', headers: csrfHeaders(csrf) });
       const json = await res.json();
       if (json.success) {
         setApplications((prev) =>
@@ -80,7 +82,7 @@ export default function LandlordApplicationsPage() {
     try {
       const res = await fetch(`/api/landlord/applications/${id}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ reason }),
       });
       const json = await res.json();

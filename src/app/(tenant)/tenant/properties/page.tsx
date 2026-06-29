@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -73,6 +74,7 @@ function PropertyImageCarousel({ images, title }: { images: { cdn_url: string | 
 }
 
 export default function TenantPropertiesPage() {
+  const csrf = useCsrf();
   const [properties, setProperties] = useState<PropertyListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -109,7 +111,7 @@ export default function TenantPropertiesPage() {
     setSavingId(propertyId);
     try {
       if (isSaved) {
-        await fetch(`/api/tenant/saved?property_id=${propertyId}`, { method: 'DELETE' });
+        await fetch(`/api/tenant/saved?property_id=${propertyId}`, { method: 'DELETE', headers: { 'x-csrf-token': csrf } });
         setSavedIds((prev) => {
           const next = new Set(prev);
           next.delete(propertyId);
@@ -118,7 +120,7 @@ export default function TenantPropertiesPage() {
       } else {
         await fetch('/api/tenant/saved', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: csrfHeaders(csrf),
           body: JSON.stringify({ property_id: propertyId }),
         });
         setSavedIds((prev) => new Set(Array.from(prev).concat(propertyId)));
@@ -137,7 +139,7 @@ export default function TenantPropertiesPage() {
     try {
       const res = await fetch('/api/tenant/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ property_id: propertyId }),
       });
       const json = await res.json();

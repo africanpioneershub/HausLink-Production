@@ -1,6 +1,11 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const SECRET = process.env.CSRF_SECRET ?? 'dev-csrf-secret-change-in-production';
+const SECRET = process.env.CSRF_SECRET ?? '';
+if (!SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[CSRF] CRITICAL: CSRF_SECRET is not set in production. Set it in your environment variables.');
+  }
+}
 
 export function generateCsrfToken(): string {
   const nonce = Math.random().toString(36).slice(2);

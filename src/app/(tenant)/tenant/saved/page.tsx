@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Calendar, CheckCircle2, Heart } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { formatRwf } from '@/lib/utils';
+import { useCsrf } from '@/hooks/useCsrf';
 
 interface SavedPropertyItem {
   id: string;
@@ -20,6 +21,7 @@ interface SavedPropertyItem {
 }
 
 export default function TenantSavedPage() {
+  const csrf = useCsrf();
   const [saved, setSaved] = useState<SavedPropertyItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +44,7 @@ export default function TenantSavedPage() {
   }, [saved]);
 
   async function handleUnsave(propertyId: string) {
-    await fetch(`/api/tenant/saved?property_id=${propertyId}`, { method: 'DELETE' });
+    await fetch(`/api/tenant/saved?property_id=${propertyId}`, { method: 'DELETE', headers: { 'x-csrf-token': csrf } });
     setSaved((prev) => prev.filter((s) => s.property.id !== propertyId));
   }
 

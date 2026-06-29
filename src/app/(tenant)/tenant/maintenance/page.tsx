@@ -5,6 +5,7 @@ import { AlertCircle, Upload, X } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { MaintenanceCategory, MaintenancePriority, MaintenanceStatus } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface MaintenanceRequestItem {
   id: string;
@@ -38,6 +39,7 @@ const CATEGORIES: MaintenanceCategory[] = [
 const PRIORITIES: MaintenancePriority[] = ['LOW', 'MEDIUM', 'HIGH', 'EMERGENCY'];
 
 export default function TenantMaintenancePage() {
+  const csrf = useCsrf();
   const [hasTenancy, setHasTenancy] = useState<boolean | null>(null);
   const [requests, setRequests] = useState<MaintenanceRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function TenantMaintenancePage() {
 
       const res = await fetch('/api/tenant/maintenance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ title, category, priority, description, photo_urls: photoUrls }),
       });
       const json = await res.json();

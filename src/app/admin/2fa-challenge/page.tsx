@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 export default function AdminTwoFaChallengePage() {
+  const csrf = useCsrf();
   const router = useRouter();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +20,7 @@ export default function AdminTwoFaChallengePage() {
     try {
       const res = await fetch('/api/admin/2fa/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ code }),
       });
       const json = await res.json();

@@ -18,6 +18,7 @@ import {
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate } from '@/lib/utils';
 import type { MaintenanceCategory, MaintenancePriority, MaintenanceStatus } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface AdminMaintenanceItem {
   id: string;
@@ -45,6 +46,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export default function AdminMaintenancePage() {
+  const csrf = useCsrf();
   const [requests, setRequests] = useState<AdminMaintenanceItem[]>([]);
   const [kpis, setKpis] = useState({ total: 0, open: 0, inProgress: 0, resolved: 0, emergency: 0 });
   const [byCategory, setByCategory] = useState<{ category: string; count: number }[]>([]);
@@ -73,7 +75,7 @@ export default function AdminMaintenancePage() {
   async function handleAssign(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/admin/maintenance/${id}/assign`, { method: 'POST' });
+      await fetch(`/api/admin/maintenance/${id}/assign`, { method: 'POST', headers: csrfHeaders(csrf) });
       loadRequests();
     } finally {
       setBusyId(null);

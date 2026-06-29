@@ -9,6 +9,7 @@ import type {
   MaintenancePriority,
   MaintenanceStatus,
 } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface LandlordMaintenanceItem {
   id: string;
@@ -43,6 +44,7 @@ interface PropertyOption {
 }
 
 export default function LandlordMaintenancePage() {
+  const csrf = useCsrf();
   const [requests, setRequests] = useState<LandlordMaintenanceItem[]>([]);
   const [kpis, setKpis] = useState({ total: 0, open: 0, inProgress: 0, resolved: 0, emergency: 0 });
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function LandlordMaintenancePage() {
     try {
       const res = await fetch(`/api/landlord/maintenance/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ status }),
       });
       const json = await res.json();
@@ -102,7 +104,7 @@ export default function LandlordMaintenancePage() {
     try {
       const res = await fetch('/api/landlord/maintenance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({
           title: formTitle,
           description: formDescription,

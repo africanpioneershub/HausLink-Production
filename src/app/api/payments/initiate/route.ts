@@ -11,7 +11,6 @@ const initiateSchema = z.object({
   tenancyId: z.string().min(1),
   method: z.enum(['MTN_MOMO', 'AIRTEL_MONEY', 'STRIPE']),
   phoneNumber: z.string().min(4).max(20).optional(),
-  amount: z.number().int().positive().optional(),
 });
 
 interface PaymentInstructions {
@@ -52,7 +51,7 @@ export const POST = withAuth(['TENANT'])(
       );
     }
 
-    const { tenancyId, method, phoneNumber, amount: amountOverride } = parsed.data;
+    const { tenancyId, method, phoneNumber } = parsed.data;
 
     if (method === 'STRIPE') {
       return NextResponse.json(
@@ -80,7 +79,7 @@ export const POST = withAuth(['TENANT'])(
       );
     }
 
-    const amount = amountOverride ?? tenancy.rent_rwf;
+    const amount = tenancy.rent_rwf;
 
     // Prevent duplicate in-flight requests: if the tenant already has a
     // pending rent payment for this tenancy, return it instead of creating

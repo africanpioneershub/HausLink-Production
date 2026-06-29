@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate, formatRwf } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface AdminPaymentItem {
   id: string;
@@ -39,6 +40,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function AdminPaymentsPage() {
+  const csrf = useCsrf();
   const [payments, setPayments] = useState<AdminPaymentItem[]>([]);
   const [chart, setChart] = useState<ChartPoint[]>([]);
   const [kpis, setKpis] = useState({
@@ -73,7 +75,7 @@ export default function AdminPaymentsPage() {
     if (!window.confirm('Refund this payment?')) return;
     setRefundingId(id);
     try {
-      const res = await fetch(`/api/admin/payments/${id}/refund`, { method: 'POST' });
+      const res = await fetch(`/api/admin/payments/${id}/refund`, { method: 'POST', headers: csrfHeaders(csrf) });
       const json = await res.json();
       if (json.success) {
         setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'REFUNDED' } : p)));

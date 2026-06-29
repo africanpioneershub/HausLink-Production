@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { isAdminOtpConfigured, verifyAdminOtp } from '@/lib/auth/totp';
-import { supabaseAdmin } from '@/lib/supabase/admin';
 import { setSession, getSession } from '@/lib/redis/session';
+import { redis } from '@/lib/redis/client';
 import { authRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
+
+const ADMIN_2FA_TTL = 3600; // 1 hour per-session
 
 export const POST = withAuth(['ADMIN'])(
   async (request, _context, admin) => {
@@ -42,10 +44,9 @@ export const POST = withAuth(['ADMIN'])(
       twoFaVerified: true,
     });
 
-    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(admin.id);
-    await supabaseAdmin.auth.admin.updateUserById(admin.id, {
-      user_metadata: { ...authUserData.user?.user_metadata, two_fa_verified: true },
-    });
+    // Store a dedicated per-session 2FA key with a 1-hour TTL.
+    // This is the authoritative 2FA check — NOT user_metadata (which was permanent and insecure).
+    await redis.set(`admin:2fa:${admin.id}`, '1', { ex: ADMIN_2FA_TTL });
 
     return NextResponse.json({ success: true, data: { twoFaVerified: true } });
   }

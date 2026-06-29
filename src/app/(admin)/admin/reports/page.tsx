@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, Flag, XCircle } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate } from '@/lib/utils';
 import type { ReportStatus, ReportType } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface ReportItem {
   id: string;
@@ -35,6 +36,7 @@ const STATUS_BADGE: Record<ReportStatus, string> = {
 };
 
 export default function AdminReportsPage() {
+  const csrf = useCsrf();
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [kpis, setKpis] = useState({ total: 0, pending: 0, resolved: 0, falseAlarms: 0 });
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ export default function AdminReportsPage() {
     try {
       await fetch(`/api/admin/reports/${id}/resolve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ action }),
       });
       loadReports();

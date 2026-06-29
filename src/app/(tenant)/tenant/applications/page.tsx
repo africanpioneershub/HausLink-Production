@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cn, formatDate, formatRwf } from '@/lib/utils';
 import type { ApplicationStatus } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface ApplicationListItem {
   id: string;
@@ -29,6 +30,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 export default function TenantApplicationsPage() {
+  const csrf = useCsrf();
   const [applications, setApplications] = useState<ApplicationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('ALL');
@@ -63,7 +65,7 @@ export default function TenantApplicationsPage() {
   );
 
   async function handleWithdraw(id: string) {
-    const res = await fetch(`/api/tenant/applications/${id}/withdraw`, { method: 'POST' });
+    const res = await fetch(`/api/tenant/applications/${id}/withdraw`, { method: 'POST', headers: csrfHeaders(csrf) });
     const json = await res.json();
     if (json.success) {
       setApplications((prev) =>

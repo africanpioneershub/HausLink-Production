@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn, formatRwf } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 type PaymentMethod = 'MTN_MOMO' | 'AIRTEL_MONEY';
 type ModalStatus = 'idle' | 'submitting' | 'instructions' | 'completed' | 'failed' | 'error';
@@ -44,6 +45,7 @@ function stripCountryCode(phone: string | undefined): string {
 }
 
 export function PayRentButton({ tenancyId, propertyTitle, amount, initialPhone }: PayRentButtonProps) {
+  const csrf = useCsrf();
   const [open, setOpen] = useState(false);
   const [countryCode, setCountryCode] = useState('+250');
   const [phone, setPhone] = useState(stripCountryCode(initialPhone));
@@ -115,12 +117,11 @@ export function PayRentButton({ tenancyId, propertyTitle, amount, initialPhone }
     try {
       const res = await fetch('/api/payments/initiate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({
           tenancyId,
           method,
           phoneNumber: `${countryCode}${phone}`,
-          amount,
         }),
       });
       const json = await res.json();

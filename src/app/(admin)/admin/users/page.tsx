@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Briefcase, ShieldAlert, UserCheck, Users, X } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface AdminUserItem {
   id: string;
@@ -53,6 +54,7 @@ interface UserDetail {
 }
 
 export default function AdminUsersPage() {
+  const csrf = useCsrf();
   const [tab, setTab] = useState<TabKey>('ALL');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -99,7 +101,7 @@ export default function AdminUsersPage() {
     try {
       await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ userId, status }),
       });
       loadUsers();
@@ -112,7 +114,7 @@ export default function AdminUsersPage() {
     if (!window.confirm('Ban this user? They will lose access immediately.')) return;
     setBusyId(userId);
     try {
-      await fetch(`/api/admin/users/${userId}/ban`, { method: 'POST' });
+      await fetch(`/api/admin/users/${userId}/ban`, { method: 'POST', headers: csrfHeaders(csrf) });
       loadUsers();
     } finally {
       setBusyId(null);
@@ -122,7 +124,7 @@ export default function AdminUsersPage() {
   async function handleApproveRegistration(userId: string) {
     setBusyId(userId);
     try {
-      await fetch(`/api/admin/users/${userId}/approve-registration`, { method: 'POST' });
+      await fetch(`/api/admin/users/${userId}/approve-registration`, { method: 'POST', headers: csrfHeaders(csrf) });
       loadUsers();
     } finally {
       setBusyId(null);
@@ -147,7 +149,7 @@ export default function AdminUsersPage() {
     try {
       await fetch(`/api/admin/users/${userId}/reject-registration`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ reason }),
       });
       loadUsers();

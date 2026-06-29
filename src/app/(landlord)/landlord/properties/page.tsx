@@ -7,6 +7,7 @@ import { KpiCard } from '@/components/shared/KpiCard';
 import { ImageUploader } from '@/components/landlord/ImageUploader';
 import { cn, formatRwf } from '@/lib/utils';
 import type { PropertyType } from '@/types';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -43,6 +44,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function LandlordPropertiesPage() {
+  const csrf = useCsrf();
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [kpis, setKpis] = useState({ total: 0, available: 0, rented: 0, draft: 0 });
   const [loading, setLoading] = useState(true);
@@ -119,7 +121,7 @@ export default function LandlordPropertiesPage() {
     try {
       const res = await fetch(`/api/landlord/properties/${editingProperty.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({
           title: editTitle,
           type: editType,
@@ -161,7 +163,7 @@ export default function LandlordPropertiesPage() {
     try {
       const res = await fetch('/api/landlord/properties', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({
           title,
           type,

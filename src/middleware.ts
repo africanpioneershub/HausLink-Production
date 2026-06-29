@@ -1,11 +1,19 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { Redis } from '@upstash/redis';
 
 const PROTECTED_ROUTES: Record<string, { requiredRole: string; extraGates: string[] }> = {
   '/tenant': { requiredRole: 'TENANT', extraGates: ['ACCOUNT_ACTIVE'] },
   '/landlord': { requiredRole: 'LANDLORD', extraGates: ['ACCOUNT_ACTIVE', 'REGISTRATION_PAID'] },
   '/admin': { requiredRole: 'ADMIN', extraGates: ['TWO_FA_VERIFIED'] },
 };
+
+function getRedis(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+}
 
 function isSupabaseConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -95,8 +103,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (config.extraGates.includes('TWO_FA_VERIFIED') && pathname !== '/admin/2fa-challenge') {
-    const twoFa = user.user_metadata?.two_fa_verified as boolean;
-    if (!twoFa) {
+    const redisClient = getRedis();
+    const twoFaVerified = redisClient ? await redisClient.get(`admin:2fa:${user.id}`) : null;
+    if (!twoFaVerified) {
       return NextResponse.redirect(new URL('/admin/2fa-challenge', request.url));
     }
   }

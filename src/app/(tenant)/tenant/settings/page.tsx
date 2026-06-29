@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 type TabKey = 'PROFILE' | 'SECURITY' | 'VERIFICATION' | 'NOTIFICATIONS';
 
@@ -55,6 +56,7 @@ export default function TenantSettingsPage() {
 }
 
 function TenantSettingsContent() {
+  const csrf = useCsrf();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabKey>('PROFILE');
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -106,7 +108,7 @@ function TenantSettingsContent() {
     try {
       const res = await fetch('/api/user/profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ name, phone, city, district }),
       });
       const json = await res.json();
@@ -142,7 +144,7 @@ function TenantSettingsContent() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('documentType', documentType);
-      const res = await fetch('/api/kyc/submit', { method: 'POST', body: formData });
+      const res = await fetch('/api/kyc/submit', { method: 'POST', headers: { 'x-csrf-token': csrf }, body: formData });
       const json = await res.json();
       if (!json.success) {
         setUploadError(json.error ?? 'Failed to upload document');
@@ -163,7 +165,7 @@ function TenantSettingsContent() {
     try {
       await fetch('/api/user/preferences', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ [key]: updated[key] }),
       });
     } finally {

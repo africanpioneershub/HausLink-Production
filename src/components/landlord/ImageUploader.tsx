@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Star, Trash2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCsrf } from '@/hooks/useCsrf';
 
 interface PropertyImage {
   id: string;
@@ -16,6 +17,7 @@ const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGES = 10;
 
 export function ImageUploader({ propertyId }: { propertyId: string }) {
+  const csrf = useCsrf();
   const [images, setImages] = useState<PropertyImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -64,6 +66,7 @@ export function ImageUploader({ propertyId }: { propertyId: string }) {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `/api/landlord/properties/${propertyId}/images`);
+        xhr.setRequestHeader('x-csrf-token', csrf);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
         };
@@ -96,6 +99,7 @@ export function ImageUploader({ propertyId }: { propertyId: string }) {
   async function handleDelete(imageId: string) {
     await fetch(`/api/landlord/properties/${propertyId}/images/${imageId}`, {
       method: 'DELETE',
+      headers: { 'x-csrf-token': csrf },
     });
     loadImages();
   }
@@ -103,6 +107,7 @@ export function ImageUploader({ propertyId }: { propertyId: string }) {
   async function handleSetPrimary(imageId: string) {
     await fetch(`/api/landlord/properties/${propertyId}/images/${imageId}`, {
       method: 'PATCH',
+      headers: { 'x-csrf-token': csrf },
     });
     loadImages();
   }

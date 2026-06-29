@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, DollarSign, History, Lock, SlidersHorizontal } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 type TabKey = 'GENERAL' | 'PRICING' | 'NOTIFICATIONS' | 'SECURITY' | 'AUDIT_LOG';
 
@@ -40,6 +41,7 @@ interface AuditLogEntry {
 }
 
 export default function AdminSettingsPage() {
+  const csrf = useCsrf();
   const [tab, setTab] = useState<TabKey>('GENERAL');
   const [config, setConfig] = useState<PlatformConfigData | null>(null);
   const [saving, setSaving] = useState(false);
@@ -80,7 +82,7 @@ export default function AdminSettingsPage() {
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify(patch),
       });
       const json = await res.json();

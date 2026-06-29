@@ -2,6 +2,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { UserRole } from '@/types';
 import { isAdminIpAllowed } from '@/lib/admin-guard';
+import { validateCsrfToken } from '@/lib/csrf';
+
+const CSRF_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 type AuthedHandler = (
   request: Request,
@@ -47,6 +50,16 @@ export function withAuth(allowedRoles: UserRole[]) {
           if (!isAdminIpAllowed(ip)) {
             return NextResponse.json(
               { success: false, error: 'Forbidden', code: 'IP_NOT_ALLOWED' },
+              { status: 403 }
+            );
+          }
+        }
+
+        if (CSRF_METHODS.has(request.method?.toUpperCase() ?? '')) {
+          const csrfToken = request.headers.get('x-csrf-token');
+          if (!csrfToken || !validateCsrfToken(csrfToken)) {
+            return NextResponse.json(
+              { success: false, error: 'Invalid or missing CSRF token', code: 'CSRF_INVALID' },
               { status: 403 }
             );
           }

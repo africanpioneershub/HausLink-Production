@@ -67,7 +67,12 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
       );
     }
 
-    const storagePath = `${user.email}/${documentType}/${file.name}`;
+    // Use a server-generated filename to prevent path injection via client-controlled file.name
+    const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const safeExt = /^[a-z0-9]{1,10}$/.test(rawExt) ? `.${rawExt}` : '';
+    const safeName = `${documentType}_${Date.now()}${safeExt}`;
+    const safeEmail = user.email.replace(/[^a-zA-Z0-9@._-]/g, '_');
+    const storagePath = `${safeEmail}/${safeName}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('kyc-documents')

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Ban, Building2, CheckCircle2, Eye, Pencil, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { cn, formatDate, formatRwf } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface KycDocument {
   id: string;
@@ -79,6 +80,7 @@ const KYC_BADGE: Record<string, string> = {
 };
 
 export default function AdminVerificationPage() {
+  const csrf = useCsrf();
   const [moduleTab, setModuleTab] = useState<ModuleTab>('KYC');
   const [kycFilter, setKycFilter] = useState<KycFilter>('ALL');
   const [users, setUsers] = useState<KycUserItem[]>([]);
@@ -161,7 +163,7 @@ export default function AdminVerificationPage() {
   async function handleVerifyKyc(userId: string) {
     setBusyId(userId);
     try {
-      await fetch(`/api/admin/kyc/${userId}/approve`, { method: 'POST' });
+      await fetch(`/api/admin/kyc/${userId}/approve`, { method: 'POST', headers: csrfHeaders(csrf) });
       loadKyc(kycFilter);
     } finally {
       setBusyId(null);
@@ -175,7 +177,7 @@ export default function AdminVerificationPage() {
     try {
       await fetch(`/api/admin/kyc/${userId}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ reason }),
       });
       loadKyc(kycFilter);
@@ -188,7 +190,7 @@ export default function AdminVerificationPage() {
     if (!window.confirm('Ban this user? They will lose access immediately.')) return;
     setBusyId(userId);
     try {
-      await fetch(`/api/admin/users/${userId}/ban`, { method: 'POST' });
+      await fetch(`/api/admin/users/${userId}/ban`, { method: 'POST', headers: csrfHeaders(csrf) });
       loadKyc(kycFilter);
     } finally {
       setBusyId(null);
@@ -198,7 +200,7 @@ export default function AdminVerificationPage() {
   async function handleApproveProperty(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/admin/properties/${id}/approve`, { method: 'POST' });
+      await fetch(`/api/admin/properties/${id}/approve`, { method: 'POST', headers: csrfHeaders(csrf) });
       loadProperties();
     } finally {
       setBusyId(null);
@@ -212,7 +214,7 @@ export default function AdminVerificationPage() {
     try {
       await fetch(`/api/admin/properties/${id}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ reason }),
       });
       loadProperties();
@@ -225,7 +227,7 @@ export default function AdminVerificationPage() {
     if (!window.confirm('Delete this property? This cannot be undone.')) return;
     setBusyId(id);
     try {
-      await fetch(`/api/admin/properties/${id}`, { method: 'DELETE' });
+      await fetch(`/api/admin/properties/${id}`, { method: 'DELETE', headers: { 'x-csrf-token': csrf } });
       loadProperties();
     } finally {
       setBusyId(null);
@@ -250,7 +252,7 @@ export default function AdminVerificationPage() {
     try {
       await fetch(`/api/admin/properties/${editingProperty.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({
           title: editForm.title,
           type: editForm.type,

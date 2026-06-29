@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ApplyButton({ propertyId, kycStatus, initialApplicationStatus }: Props) {
+  const csrf = useCsrf();
   const [applicationStatus, setApplicationStatus] = useState<string | null>(initialApplicationStatus);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function ApplyButton({ propertyId, kycStatus, initialApplicationStatus }:
     try {
       const res = await fetch('/api/tenant/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(csrf),
         body: JSON.stringify({ property_id: propertyId }),
       });
       const json = await res.json();

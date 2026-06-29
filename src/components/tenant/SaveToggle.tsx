@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
 
 interface SaveToggleProps {
   propertyId: string;
@@ -10,6 +11,7 @@ interface SaveToggleProps {
 }
 
 export function SaveToggle({ propertyId, initialSaved }: SaveToggleProps) {
+  const csrf = useCsrf();
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
 
@@ -17,11 +19,14 @@ export function SaveToggle({ propertyId, initialSaved }: SaveToggleProps) {
     setLoading(true);
     try {
       if (saved) {
-        await fetch(`/api/tenant/saved?property_id=${propertyId}`, { method: 'DELETE' });
+        await fetch(`/api/tenant/saved?property_id=${propertyId}`, {
+          method: 'DELETE',
+          headers: { 'x-csrf-token': csrf },
+        });
       } else {
         await fetch('/api/tenant/saved', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: csrfHeaders(csrf),
           body: JSON.stringify({ property_id: propertyId }),
         });
       }
