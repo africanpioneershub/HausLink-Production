@@ -46,12 +46,13 @@ function toCardData(item: PublicPropertyApiItem): PropertyCardData {
 }
 
 const FILTER_TABS = [
-  'PREMIUM PROPERTIES',
-  'NEW LISTINGS',
-  'MOST VIEWED',
-  'VERIFIED LANDLORDS',
-  'AFFORDABLE RENTALS',
-  'STUDENT HOUSING',
+  { key: 'ALL',       label: 'All' },
+  { key: 'APARTMENT', label: 'Apartments' },
+  { key: 'HOUSE',     label: 'Houses' },
+  { key: 'STUDIO',    label: 'Studios' },
+  { key: 'ROOM',      label: 'Rooms' },
+  { key: 'VILLA',     label: 'Villas' },
+  { key: 'OFFICE',    label: 'Office' },
 ];
 
 const LANDLORD_FEATURES = [
@@ -104,11 +105,10 @@ const TESTIMONIALS = [
 
 export default function Home() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState(FILTER_TABS[0]);
+  const [activeType, setActiveType] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [featuredProperties, setFeaturedProperties] = useState<PropertyCardData[]>([]);
-  const [catalogProperties, setCatalogProperties] = useState<PropertyCardData[]>([]);
-  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [properties, setProperties] = useState<PropertyCardData[]>([]);
+  const [totalProperties, setTotalProperties] = useState(0);
   const [stats, setStats] = useState([
     { value: '0', label: 'Active Listings' },
     { value: '0', label: 'Active Landlords' },
@@ -117,38 +117,34 @@ export default function Home() {
   ]);
 
   useEffect(() => {
-    fetch('/api/public/properties?featured=true&pageSize=6')
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success) setFeaturedProperties(json.data.data.map(toCardData));
-      })
-      .catch(() => {});
-
-    fetch('/api/public/properties?pageSize=6')
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success) {
-          setCatalogProperties(json.data.data.map(toCardData));
-          setCatalogTotal(json.data.total);
-        }
-      })
-      .catch(() => {});
-
     fetch('/api/public/stats')
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {
-          const fmt = (n: number) => n > 0 ? `${n}+` : `${n}`;
+          const fmt = (n: number) => (n > 0 ? `${n}+` : `${n}`);
           setStats([
-            { value: fmt(json.data.activeListings), label: 'Active Listings' },
+            { value: fmt(json.data.activeListings),    label: 'Active Listings' },
             { value: fmt(json.data.verifiedLandlords), label: 'Active Landlords' },
-            { value: fmt(json.data.happyTenants), label: 'Happy Tenants' },
-            { value: `${json.data.districtsCovered}`, label: 'Districts Covered' },
+            { value: fmt(json.data.happyTenants),      label: 'Happy Tenants' },
+            { value: `${json.data.districtsCovered}`,  label: 'Districts Covered' },
           ]);
         }
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const qs = activeType !== 'ALL' ? `&type=${activeType}` : '';
+    fetch(`/api/public/properties?pageSize=6${qs}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setProperties(json.data.data.map(toCardData));
+          setTotalProperties(json.data.total);
+        }
+      })
+      .catch(() => {});
+  }, [activeType]);
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -193,49 +189,29 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Section 3 — Featured Properties */}
-        <section className="bg-white">
+        {/* Section 3 — Available Properties */}
+        <section id="features" className="bg-white border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-gray-900">Featured Properties</h2>
-              <p className="mt-3 text-gray-600">
-                Explore our most popular and highly-rated listings
-              </p>
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+              <h2 className="text-3xl font-bold text-gray-900">Available Properties</h2>
+              <p className="text-gray-500 text-sm">({totalProperties} Listings)</p>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {/* Type filter tabs */}
+            <div className="flex flex-wrap gap-2 mb-6">
               {FILTER_TABS.map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tab.key}
+                  onClick={() => setActiveType(tab.key)}
                   className={`text-xs font-semibold uppercase tracking-wide px-4 py-2 rounded-full border transition-colors ${
-                    activeTab === tab
+                    activeType === tab.key
                       ? 'bg-brand-teal text-white border-brand-teal'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-brand-teal hover:text-brand-teal'
                   }`}
                 >
-                  {tab}
+                  {tab.label}
                 </button>
               ))}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredProperties.map((property) => (
-                <PropertyCard key={property.id} property={property} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4 — Available Rental Properties */}
-        <section className="bg-white border-t border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <p className="text-sm font-bold uppercase tracking-wide text-green-600 mb-2">
-              Verified Catalogs
-            </p>
-            <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-              <h2 className="text-3xl font-bold text-gray-900">Available Rental Properties</h2>
-              <p className="text-gray-500 text-sm">({catalogTotal} Listings)</p>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-3 mb-10">
@@ -274,14 +250,14 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {catalogProperties.map((property) => (
+              {properties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
             </div>
           </div>
         </section>
 
-        {/* Section 6 — For Landlords */}
+        {/* Section 4 — For Landlords */}
         <section className="bg-[#1A2B40]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
             <p className="text-xs font-bold uppercase tracking-wide text-white mb-2">
@@ -312,7 +288,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Section 7 — Testimonials */}
+        {/* Section 5 — Testimonials */}
         <section id="testimonials" className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <p className="text-xs font-bold uppercase tracking-wide text-brand-teal text-center mb-2">
