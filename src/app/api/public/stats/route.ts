@@ -29,7 +29,7 @@ export async function GET() {
     const [activeListings, verifiedLandlords, happyTenants] = await Promise.all([
       prisma.property.count({ where: { status: 'ACTIVE' } }),
       prisma.user.count({ where: { role: 'LANDLORD', status: 'ACTIVE' } }),
-      prisma.tenancy.count({ where: { status: 'ACTIVE' } }),
+      prisma.user.count({ where: { role: 'TENANT', status: 'ACTIVE' } }),
     ]);
 
     data = {
