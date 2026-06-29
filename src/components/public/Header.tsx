@@ -6,12 +6,13 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 
 const NAV_LINKS = [
-  { label: 'Features', href: '/how-it-works' },
-  { label: 'Testimonial', href: '/#testimonials' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-  { label: 'FAQ', href: '/faq' },
+  { label: 'Home',         href: '/' },
+  { label: 'Features',     href: '/#features' },
+  { label: 'Testimonials', href: '/#testimonials' },
+  { label: 'Pricing',      href: '/pricing' },
+  { label: 'About',        href: '/about' },
+  { label: 'Contact',      href: '/contact' },
+  { label: 'FAQ',          href: '/faq' },
 ];
 
 export function Header() {
