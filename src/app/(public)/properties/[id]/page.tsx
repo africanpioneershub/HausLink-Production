@@ -4,21 +4,36 @@ import { ArrowLeft, BedDouble, Bath, Building2, ImageOff, MapPin, CalendarDays }
 import { prisma } from '@/lib/prisma/client';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { formatRwf, formatDate } from '@/lib/utils';
+import { getCache, setCache } from '@/lib/redis/cache';
+import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
+
+type PropertyWithDetails = Prisma.PropertyGetPayload<{
+  include: { images: true; landlord: { select: { name: true } } };
+}>;
 
 export default async function PublicPropertyDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const property = await prisma.property.findUnique({
-    where: { id: params.id, status: 'ACTIVE' },
-    include: {
-      images: { orderBy: { display_order: 'asc' } },
-      landlord: { select: { name: true } },
-    },
-  });
+  const cacheKey = `public:property:${params.id}`;
+
+  let property = await getCache<PropertyWithDetails>(cacheKey).catch(() => null);
+
+  if (!property) {
+    property = await prisma.property.findUnique({
+      where: { id: params.id, status: 'ACTIVE' },
+      include: {
+        images: { orderBy: { display_order: 'asc' } },
+        landlord: { select: { name: true } },
+      },
+    });
+    if (property) {
+      setCache(cacheKey, property, 300).catch(() => {}); // 5 min, fire-and-forget
+    }
+  }
 
   if (!property) notFound();
 
