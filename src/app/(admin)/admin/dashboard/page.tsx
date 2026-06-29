@@ -21,6 +21,8 @@ export default async function AdminDashboardPage() {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setDate(1);
 
+  const oneDayAgo = new Date(Date.now() - 86_400_000);
+
   let kpis: AdminKpiRow = {
     total_users: 0,
     total_properties: 0,
@@ -33,8 +35,22 @@ export default async function AdminDashboardPage() {
   let pendingKycUsers: User[] = [];
 
   try {
-    const [kpiRows, payments, kycUsers] = await Promise.all([
-      prisma.$queryRaw<AdminKpiRow[]>`SELECT * FROM get_admin_dashboard_kpis()`,
+    const [
+      totalUsers,
+      totalProperties,
+      revenueAgg,
+      pendingKyc,
+      pendingApplications,
+      failedPayments,
+      payments,
+      kycUsers,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.property.count(),
+      prisma.ledgerEntry.aggregate({ _sum: { platform_fee_rwf: true } }),
+      prisma.user.count({ where: { kyc_status: 'PENDING' } }),
+      prisma.application.count({ where: { status: 'PENDING' } }),
+      prisma.payment.count({ where: { status: 'FAILED', created_at: { gte: oneDayAgo } } }),
       prisma.payment.findMany({
         where: { status: 'COMPLETED', paid_at: { gte: sixMonthsAgo } },
         select: { amount_rwf: true, paid_at: true },
@@ -46,7 +62,14 @@ export default async function AdminDashboardPage() {
       }),
     ]);
 
-    kpis = kpiRows[0] ?? kpis;
+    kpis = {
+      total_users: totalUsers,
+      total_properties: totalProperties,
+      platform_revenue_rwf: revenueAgg._sum.platform_fee_rwf ?? 0,
+      pending_kyc: pendingKyc,
+      pending_applications: pendingApplications,
+      failed_payments: failedPayments,
+    };
     recentPayments = payments;
     pendingKycUsers = kycUsers;
   } catch (error) {
