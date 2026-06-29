@@ -22,6 +22,13 @@ export const paymentRateLimit = new Ratelimit({
   prefix: 'rl:payment',
 });
 
+export const contactRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '60 s'),
+  analytics: true,
+  prefix: 'rl:contact',
+});
+
 export async function applyRateLimit(
   limiter: Ratelimit,
   identifier: string
