@@ -130,6 +130,10 @@ export function PropertyCard({ property }: { property: PropertyCardData }) {
             <Building2 className="w-4 h-4 text-gray-500" />
             {property.type}
           </span>
+          <span className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
+            <Eye className="w-3 h-3" />
+            {property.views} views
+          </span>
         </div>
 
         <div className="flex items-center gap-1 mb-3">

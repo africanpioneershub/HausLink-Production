@@ -21,6 +21,7 @@ interface PublicPropertyApiItem {
   is_verified: boolean;
   featured: boolean;
   imageUrl: string | null;
+  images?: string[];
 }
 
 function toCardData(item: PublicPropertyApiItem): PropertyCardData {
@@ -39,6 +40,7 @@ function toCardData(item: PublicPropertyApiItem): PropertyCardData {
     featured: item.featured,
     description: item.description ?? '',
     imageUrl: item.imageUrl,
+    images: item.images,
   };
 }
 
