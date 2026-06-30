@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { SECURITY } from '@/lib/constants';
+import '@/lib/env-check';
 
 const SECRET = process.env.CSRF_SECRET ?? '';
 
