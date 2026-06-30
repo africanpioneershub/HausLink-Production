@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { SECURITY } from '@/lib/constants';
 
 const SECRET = process.env.CSRF_SECRET ?? '';
 if (!SECRET) {
@@ -19,6 +20,12 @@ export function validateCsrfToken(token: string): boolean {
   if (!token || typeof token !== 'string') return false;
   const parts = token.split(':');
   if (parts.length !== 3) return false;
+
+  const issuedAtMs = parseInt(parts[1], 36);
+  if (isNaN(issuedAtMs) || Date.now() - issuedAtMs > SECURITY.CSRF_TOKEN_TTL_SECONDS * 1000) {
+    return false;
+  }
+
   const payload = `${parts[0]}:${parts[1]}`;
   const expected = createHmac('sha256', SECRET).update(payload).digest('hex');
   try {

@@ -6,7 +6,17 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expectedToken = process.env.CRON_SECRET;
+
+  if (!expectedToken) {
+    console.error('[cron] CRON_SECRET not configured - rejecting all requests');
+    return NextResponse.json(
+      { success: false, error: 'Server misconfigured', code: 'MISCONFIGURED' },
+      { status: 500 }
+    );
+  }
+
+  if (authHeader !== `Bearer ${expectedToken}`) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
       { status: 401 }
