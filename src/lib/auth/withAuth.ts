@@ -46,12 +46,21 @@ export function withAuth(allowedRoles: UserRole[]) {
         }
 
         if (role === 'ADMIN') {
-          const ip = (request as Request & { headers: Headers }).headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
-          if (!isAdminIpAllowed(ip)) {
-            return NextResponse.json(
-              { success: false, error: 'Forbidden', code: 'IP_NOT_ALLOWED' },
-              { status: 403 }
-            );
+          // The 2FA verify route is exempt: it IS the endpoint that establishes
+          // the admin session, so gating it behind an IP check creates a
+          // chicken-and-egg lockout. It is already protected by Supabase auth +
+          // TOTP code + rate limiting. All other admin routes keep the IP gate.
+          const url = new URL(request.url);
+          const is2faVerifyRoute = url.pathname === '/api/admin/2fa/verify';
+
+          if (!is2faVerifyRoute) {
+            const ip = (request as Request & { headers: Headers }).headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
+            if (!isAdminIpAllowed(ip)) {
+              return NextResponse.json(
+                { success: false, error: 'Forbidden', code: 'IP_NOT_ALLOWED' },
+                { status: 403 }
+              );
+            }
           }
         }
 
