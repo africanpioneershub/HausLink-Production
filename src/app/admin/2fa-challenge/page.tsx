@@ -73,10 +73,14 @@ export default function AdminTwoFaChallengePage() {
 
           <button
             type="submit"
-            disabled={verifying || code.length !== 6}
+            disabled={verifying || code.length !== 6 || !csrf}
             className="w-full bg-brand-teal text-white font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            {verifying ? 'Verifying…' : 'Verify'}
+            {verifying
+              ? 'Verifying…'
+              : !csrf && code.length === 6
+              ? 'Loading…'
+              : 'Verify'}
           </button>
 
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
