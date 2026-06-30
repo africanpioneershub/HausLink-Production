@@ -24,9 +24,28 @@ function isSupabaseConfigured(): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  const nonceBytes = new Uint8Array(16);
+  crypto.getRandomValues(nonceBytes);
+  const nonce = btoa(Array.from(nonceBytes, (b) => String.fromCharCode(b)).join(''));
+  const cspHeader = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.supabase.co https://hauselink.com https://*.vercel-insights.com https://images.unsplash.com",
+    "font-src 'self'",
+    "connect-src 'self' https://*.supabase.co https://*.upstash.io wss://*.supabase.co https://*.vercel-insights.com",
+    "frame-src 'none'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', cspHeader);
+
   let response = NextResponse.next({
-    request: { headers: request.headers },
+    request: { headers: requestHeaders },
   });
+  response.headers.set('Content-Security-Policy', cspHeader);
 
   const pathname = request.nextUrl.pathname;
   const matchedRoute = Object.entries(PROTECTED_ROUTES).find(([prefix]) =>
@@ -58,7 +77,8 @@ export async function middleware(request: NextRequest) {
             cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             );
-            response = NextResponse.next({ request: { headers: request.headers } });
+            response = NextResponse.next({ request: { headers: requestHeaders } });
+            response.headers.set('Content-Security-Policy', cspHeader);
             cookiesToSet.forEach(({ name, value, options }) =>
               response.cookies.set(name, value, options)
             );

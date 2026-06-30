@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,6 +18,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // nonce is forwarded from middleware via x-nonce request header.
+  // Next.js reads the Content-Security-Policy response header and
+  // automatically applies the nonce to its own injected scripts.
+  // Pass `nonce` to any <Script nonce={nonce}> tags if added in future.
+  const nonce = headers().get('x-nonce') ?? '';
+  void nonce;
+
   return (
     <html lang="en">
       <head>
