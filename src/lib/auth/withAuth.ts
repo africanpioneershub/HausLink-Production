@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { UserRole } from '@/types';
 import { isAdminIpAllowed } from '@/lib/admin-guard';
 import { validateCsrfToken } from '@/lib/csrf';
+import { redis } from '@/lib/redis/client';
 
 const CSRF_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
@@ -58,6 +59,21 @@ export function withAuth(allowedRoles: UserRole[]) {
             if (!isAdminIpAllowed(ip)) {
               return NextResponse.json(
                 { success: false, error: 'Forbidden', code: 'IP_NOT_ALLOWED' },
+                { status: 403 }
+              );
+            }
+
+            // Mirror the 2FA gate that middleware enforces for /admin/* UI routes.
+            // Without this, /api/admin/* routes only required role + IP, not 2FA.
+            let twoFaVerified: string | null = null;
+            try {
+              twoFaVerified = await redis.get(`admin:2fa:${user.id}`);
+            } catch {
+              // Redis unavailable — fail closed rather than granting access.
+            }
+            if (!twoFaVerified) {
+              return NextResponse.json(
+                { success: false, error: 'Two-factor authentication required', code: '2FA_REQUIRED' },
                 { status: 403 }
               );
             }
