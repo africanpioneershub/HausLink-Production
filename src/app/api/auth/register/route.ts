@@ -59,9 +59,18 @@ async function handleRegister(request: Request) {
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
+    // Don't reveal membership status — return identical response to a real registration.
+    // The duplicate is blocked server-side; the caller cannot distinguish this from success.
+    console.info('[register] duplicate email attempt suppressed', { email });
     return NextResponse.json(
-      { success: false, error: 'An account with this email already exists', code: 'DUPLICATE' },
-      { status: 409 }
+      {
+        success: true,
+        data: {
+          message:
+            'If this email is not already registered, your account has been created. Please check your inbox to verify your email.',
+        },
+      },
+      { status: 201 }
     );
   }
 
