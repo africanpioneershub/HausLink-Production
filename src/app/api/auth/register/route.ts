@@ -139,9 +139,8 @@ async function handleRegister(request: Request) {
         error: rollbackError,
       });
     }
-    const message = dbError instanceof Error ? dbError.message : 'Failed to create account';
     return NextResponse.json(
-      { success: false, error: message, code: 'DB_ERROR' },
+      { success: false, error: 'Account creation failed. Please try again.', code: 'DB_ERROR' },
       { status: 500 }
     );
   }
