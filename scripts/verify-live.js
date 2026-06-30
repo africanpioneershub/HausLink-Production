@@ -1,8 +1,6 @@
 // Benchmark the property detail page on the live site.
 // Measures cold (first hit, cache miss) and warm (subsequent, cache hit) latency.
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
 const PROP_ID = 'cmqv272rs000bqo6o41th2nfj';
 const BASE = 'https://hauselink.com';
 const DETAIL_URL = `${BASE}/properties/${PROP_ID}`;

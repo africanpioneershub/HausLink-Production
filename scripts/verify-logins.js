@@ -4,27 +4,33 @@ const path = require('path');
 const BROWSERS_PATH = path.join(process.env.USERPROFILE, '.playwright-browsers');
 const BASE_URL = 'https://hauselink.com';
 
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+if (!DEMO_PASSWORD) {
+  console.error('Missing DEMO_PASSWORD env var. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+  process.exit(1);
+}
+
 const ACCOUNTS = [
   {
     label: 'Landlord 1',
-    email: 'landlord@hauselink.com',
-    password: 'HausLink@Demo2026!',
+    email: process.env.DEMO_LANDLORD_EMAIL ?? 'landlord@hauselink.com',
+    password: DEMO_PASSWORD,
     expectedRole: 'LANDLORD',
     checkUrl: '/landlord/dashboard',
     extraChecks: ['/landlord/properties'],
   },
   {
     label: 'Landlord 2',
-    email: 'landlord2@hauselink.com',
-    password: 'HausLink@Demo2026!',
+    email: process.env.DEMO_LANDLORD2_EMAIL ?? 'landlord2@hauselink.com',
+    password: DEMO_PASSWORD,
     expectedRole: 'LANDLORD',
     checkUrl: '/landlord/dashboard',
     extraChecks: [],
   },
   {
     label: 'Tenant',
-    email: 'tenant@hauselink.com',
-    password: 'HausLink@Demo2026!',
+    email: process.env.DEMO_TENANT_EMAIL ?? 'tenant@hauselink.com',
+    password: DEMO_PASSWORD,
     expectedRole: 'TENANT',
     checkUrl: '/tenant/dashboard',
     extraChecks: ['/tenant/properties'],

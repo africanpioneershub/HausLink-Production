@@ -7,6 +7,14 @@ const BASE_URL = 'https://www.hauselink.com';
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'tmp-screenshots', 'portals');
 if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+if (!DEMO_PASSWORD) {
+  console.error('Missing DEMO_PASSWORD env var. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+  process.exit(1);
+}
+const DEMO_LANDLORD_EMAIL = process.env.DEMO_LANDLORD_EMAIL ?? 'landlord@hauselink.com';
+const DEMO_TENANT_EMAIL = process.env.DEMO_TENANT_EMAIL ?? 'tenant@hauselink.com';
+
 async function fillEmail(page, email) {
   const emailInput = page.locator('input[type="email"]');
   await emailInput.click({ clickCount: 3 });
@@ -242,8 +250,8 @@ async function walkPages(page, portalLabel, pages, prefix) {
     console.log('\n=== Logging in: Landlord ===');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-    await fillEmail(page, 'landlord@hauselink.com');
-    await page.locator('input[type="password"]').fill('HausLink@Demo2026!');
+    await fillEmail(page, DEMO_LANDLORD_EMAIL);
+    await page.locator('input[type="password"]').fill(DEMO_PASSWORD);
     await page.locator('button[type="submit"]').click();
     try {
       await page.waitForURL((url) => !url.toString().includes('/login'), { timeout: 15000 });
@@ -267,8 +275,8 @@ async function walkPages(page, portalLabel, pages, prefix) {
     console.log('\n=== Logging in: Tenant ===');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-    await fillEmail(page, 'tenant@hauselink.com');
-    await page.locator('input[type="password"]').fill('HausLink@Demo2026!');
+    await fillEmail(page, DEMO_TENANT_EMAIL);
+    await page.locator('input[type="password"]').fill(DEMO_PASSWORD);
     await page.locator('button[type="submit"]').click();
     try {
       await page.waitForURL((url) => !url.toString().includes('/login'), { timeout: 15000 });

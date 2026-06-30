@@ -8,6 +8,13 @@ const SCREENSHOT_DIR = path.join(__dirname, '..', 'tmp-screenshots');
 const fs = require('fs');
 if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error('Missing ADMIN_EMAIL or ADMIN_PASSWORD env vars. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+  process.exit(1);
+}
+
 async function fillEmail(page, email) {
   const emailInput = page.locator('input[type="email"]');
   await emailInput.click({ clickCount: 3 });
@@ -43,16 +50,16 @@ const ADMIN_PAGES = [
   const jsErrors = [];
   page.on('pageerror', e => jsErrors.push(e.message));
 
-  console.log('=== Admin Login (afriprimeholdings@gmail.com) ===\n');
+  console.log(`=== Admin Login (${ADMIN_EMAIL}) ===\n`);
 
   // 1. Login
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  await fillEmail(page, 'afriprimeholdings@gmail.com');
+  await fillEmail(page, ADMIN_EMAIL);
   const emailVal = await page.locator('input[type="email"]').inputValue();
   console.log(`[1] Email field: "${emailVal}"`);
 
-  await page.locator('input[type="password"]').fill('HausLink@Admin2026!');
+  await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'admin-1-filled.png'), fullPage: true });
 
   await page.locator('button[type="submit"]').click();

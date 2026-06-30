@@ -5,6 +5,13 @@ const BROWSERS_PATH = path.join(process.env.USERPROFILE, '.playwright-browsers')
 const BASE_URL = 'https://www.hauselink.com';
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'tmp-screenshots');
 
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+if (!DEMO_PASSWORD) {
+  console.error('Missing DEMO_PASSWORD env var. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+  process.exit(1);
+}
+const DEMO_LANDLORD_EMAIL = process.env.DEMO_LANDLORD_EMAIL ?? 'landlord@hauselink.com';
+
 (async () => {
   const browser = await chromium.launch({
     headless: true,
@@ -20,8 +27,8 @@ const SCREENSHOT_DIR = path.join(__dirname, '..', 'tmp-screenshots');
   // Login
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForSelector('input[type="email"]');
-  await page.fill('input[type="email"]', 'landlord@hauselink.com');
-  await page.fill('input[type="password"]', 'HausLink@Demo2026!');
+  await page.fill('input[type="email"]', DEMO_LANDLORD_EMAIL);
+  await page.fill('input[type="password"]', DEMO_PASSWORD);
   await page.click('button[type="submit"]');
   console.log('Submit clicked. Waiting 8s...');
 

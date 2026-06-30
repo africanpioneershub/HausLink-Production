@@ -8,6 +8,13 @@ const SCREENSHOT_DIR = path.join(__dirname, '..', 'tmp-screenshots');
 const fs = require('fs');
 if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+if (!DEMO_PASSWORD) {
+  console.error('Missing DEMO_PASSWORD env var. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+  process.exit(1);
+}
+const DEMO_LANDLORD_EMAIL = process.env.DEMO_LANDLORD_EMAIL ?? 'landlord@hauselink.com';
+
 (async () => {
   const browser = await chromium.launch({
     headless: true,
@@ -24,8 +31,8 @@ if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: tr
   console.log(`[1] Login page loaded: ${page.url()}`);
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '1-login-page.png'), fullPage: true });
 
-  await page.fill('input[type="email"]', 'landlord@hauselink.com');
-  await page.fill('input[type="password"]', 'HausLink@Demo2026!');
+  await page.fill('input[type="email"]', DEMO_LANDLORD_EMAIL);
+  await page.fill('input[type="password"]', DEMO_PASSWORD);
   console.log('[2] Credentials entered');
 
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '2-filled.png'), fullPage: true });

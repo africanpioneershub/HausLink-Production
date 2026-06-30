@@ -1,4 +1,3 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const BASE = 'https://www.hauselink.com';
 const fs = require('fs');
 
@@ -142,7 +141,7 @@ const fs = require('fs');
   console.log('\n--- Admin 2FA Gate ---');
   console.log('  Middleware enforces TWO_FA_VERIFIED for all /admin/* routes');
   console.log('  Admin user metadata must have two_fa_verified: true to bypass challenge');
-  console.log('  Current admin (afriprimeholdings@gmail.com) passes — check ADMIN_OTP_SECRET is set');
+  console.log(`  Current admin (${process.env.ADMIN_EMAIL ?? 'see ADMIN_EMAIL env var'}) passes — check ADMIN_OTP_SECRET is set`);
 
   console.log('\n=== SECURITY CHECK COMPLETE ===');
 })();

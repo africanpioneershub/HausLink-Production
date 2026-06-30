@@ -2,8 +2,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 (async () => {
-  const EMAIL = 'landlord2@hauselink.com';
-  const PASSWORD = 'HausLink@Demo2026!';
+  const EMAIL = process.env.DEMO_LANDLORD2_EMAIL ?? 'landlord2@hauselink.com';
+  const PASSWORD = process.env.DEMO_PASSWORD;
+  if (!PASSWORD) {
+    console.error('Missing DEMO_PASSWORD env var. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+    process.exit(1);
+  }
   const NAME = 'Marie Claire Uwimana';
   const PHONE = '+250788000002';
 

@@ -4,6 +4,13 @@ const path = require('path');
 const BROWSERS_PATH = path.join(process.env.USERPROFILE, '.playwright-browsers');
 const BASE_URL = 'https://www.hauselink.com';
 
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+if (!DEMO_PASSWORD) {
+  console.error('Missing DEMO_PASSWORD env var. Copy scripts/.env.scripts.example to scripts/.env.scripts and fill in values.');
+  process.exit(1);
+}
+const DEMO_LANDLORD_EMAIL = process.env.DEMO_LANDLORD_EMAIL ?? 'landlord@hauselink.com';
+
 async function fillEmail(page, email) {
   const emailInput = page.locator('input[type="email"]');
   await emailInput.click({ clickCount: 3 });
@@ -32,8 +39,8 @@ async function fillEmail(page, email) {
 
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForSelector('input[type="email"]');
-  await fillEmail(page, 'landlord@hauselink.com');
-  await page.locator('input[type="password"]').fill('HausLink@Demo2026!');
+  await fillEmail(page, DEMO_LANDLORD_EMAIL);
+  await page.locator('input[type="password"]').fill(DEMO_PASSWORD);
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((url) => !url.toString().includes('/login'), { timeout: 15000 });
 
