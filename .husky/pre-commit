@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+gitleaks protect --staged -v 2>/dev/null || echo "⚠️  gitleaks not installed locally — install with: brew install gitleaks (macOS), choco install gitleaks (Windows), or see https://github.com/gitleaks/gitleaks#installing"

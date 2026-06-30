@@ -17,6 +17,7 @@ export function generateCsrfToken(): string {
 }
 
 export function validateCsrfToken(token: string): boolean {
+  if (!SECRET) return false;
   if (!token || typeof token !== 'string') return false;
   const parts = token.split(':');
   if (parts.length !== 3) return false;

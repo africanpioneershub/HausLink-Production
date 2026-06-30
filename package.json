@@ -10,7 +10,8 @@
     "worker": "npx ts-node --esm src/worker.ts",
     "setup:momo": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/setup-momo-sandbox.ts",
     "test:airtel": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/test-airtel-sandbox.ts",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npx prisma generate",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -44,6 +45,7 @@
     "cross-env": "^10.1.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.0",
+    "husky": "^9.1.7",
     "playwright": "^1.61.1",
     "postcss": "^8",
     "prisma": "^6.19.3",
