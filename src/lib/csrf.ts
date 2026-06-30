@@ -2,10 +2,14 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { SECURITY } from '@/lib/constants';
 
 const SECRET = process.env.CSRF_SECRET ?? '';
-if (!SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[CSRF] CRITICAL: CSRF_SECRET is not set in production. Set it in your environment variables.');
-  }
+
+if (!SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    '[CSRF] FATAL: CSRF_SECRET environment variable is not set in production. ' +
+    'The application cannot start safely without it — all CSRF-protected routes ' +
+    'would silently reject every request. Set CSRF_SECRET in Vercel environment ' +
+    'variables and redeploy.'
+  );
 }
 
 export function generateCsrfToken(): string {
