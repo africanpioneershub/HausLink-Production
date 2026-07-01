@@ -43,3 +43,8 @@ next-env.d.ts
 
 # Claude Code local settings (may contain credentials from terminal command history)
 .claude/
+scripts/.env.scripts
+
+# Temporary working files
+tmp-prop-id.txt
+tmp-screenshots/
