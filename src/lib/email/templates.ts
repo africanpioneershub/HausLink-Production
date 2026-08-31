@@ -1,13 +1,16 @@
 import { resend } from './client';
 
-const FROM = 'HausLink <noreply@contact.hauselink.com>';
+const FROM = process.env.RESEND_FROM || 'HausLink <noreply@contact.hauselink.com>';
 const SUPPORT_EMAIL = 'afriprimeholdings@gmail.com';
 
 async function send(to: string, subject: string, html: string) {
   try {
-    await resend.emails.send({ from: FROM, to, subject, html });
+     const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    if (error) {
+      console.error('[Email] Failed to send', { to, subject, error });
+    }
   } catch (error) {
-    console.error('[Email] Failed to send', { to, subject, error });
+      console.error('[Email] Failed to send (unexpected)', { to, subject, error });
   }
 }
 
