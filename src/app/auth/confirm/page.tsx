@@ -21,17 +21,36 @@ function AuthConfirmContent() {
 
   useEffect(() => {
     const code = searchParams.get('code');
+    // Supabase's signup confirmation link (generated via signUp() with no
+    // client-side PKCE verifier) redirects here with the session in a URL
+    // hash fragment (#access_token=...&refresh_token=...&type=signup), not
+    // a ?code= query param. useSearchParams() can't see the hash, so it's
+    // parsed directly from window.location.hash.
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const hashError = hashParams.get('error_description') ?? hashParams.get('error');
 
     async function verify() {
-      if (!code) {
-        setStatus('error');
-        return;
-      }
-
       const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-      if (error) {
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setStatus('error');
+          return;
+        }
+      } else if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) {
+          setStatus('error');
+          return;
+        }
+      } else {
+        if (hashError) console.error('[auth/confirm]', hashError);
         setStatus('error');
         return;
       }
