@@ -41,12 +41,20 @@ indefinitely with nothing surfacing that fact.
    that already gates `SUPABASE_SERVICE_ROLE_KEY` etc.; a missing
    `REDIS_URL` now blocks the production build/deploy entirely, with a
    message distinguishing it from `UPSTASH_REDIS_REST_URL`.
-3. ✅ `GET /api/jobs/queue-health` — new route, run every 6h via Vercel
-   Cron, calls `getJobCounts()` on each queue and logs an ERROR-level line
+3. ✅ `GET /api/jobs/queue-health` — new route, run once daily via Vercel
+   Cron (`0 18 * * *`, 12h after the billing/disbursement trigger),
+   calls `getJobCounts()` on each queue and logs an ERROR-level line
    (this app has no Sentry/Datadog/similar — `console.error` surfaced via
    Vercel's runtime logs is the existing alerting mechanism) plus returns
    HTTP 503 if a queue's `waiting` count exceeds a per-queue threshold —
-   so a dead/unhosted worker is loud within hours, not silent for months.
+   so a dead/unhosted worker is loud within a day, not silent for months.
+   **Originally scheduled every 6h — this team is on Vercel's Hobby plan,
+   which rejects any cron firing more than once/day at deploy-validation
+   time (before a Deployment object is even created, so it produces no
+   build log, just a GitHub commit status pointing at Vercel's cron
+   pricing docs). This blocked the very deploy meant to ship this fix;
+   caught and corrected before it reached production. Any new cron added
+   to this project must stay at-most-daily unless the plan changes.**
 4. ✅ `Dockerfile.worker` + `.dockerignore` — deployment scaffolding so
    `npm run worker` can be pointed at Railway/Render/Fly/a VPS in minutes
    once that hosting decision is made. No provider was provisioned or
