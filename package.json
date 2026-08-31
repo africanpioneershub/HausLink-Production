@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "worker": "npx ts-node --esm src/worker.ts",
     "setup:momo": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/setup-momo-sandbox.ts",
     "test:airtel": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx ts-node src/scripts/test-airtel-sandbox.ts",
@@ -52,6 +53,7 @@
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

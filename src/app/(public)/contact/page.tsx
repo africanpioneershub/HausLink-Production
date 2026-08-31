@@ -12,10 +12,14 @@ export default function ContactPage() {
     setStatus('submitting');
 
     try {
+      const payload = {
+        ...form,
+        phone: form.phone.trim() === '' ? undefined : form.phone,
+      };
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error('Failed to submit');

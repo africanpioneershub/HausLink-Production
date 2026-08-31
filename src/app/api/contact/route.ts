@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { sendContactFormEmail } from '@/lib/email/templates';
 import { sendWhatsAppContactConfirmation } from '@/lib/whatsapp/templates';
 import { contactRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
 import { sanitizeObject } from '@/lib/sanitize';
-
-const contactSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(150),
-  email: z.string().email('Enter a valid email address'),
-  subject: z.string().min(2, 'Subject must be at least 2 characters').max(150),
-  message: z.string().min(5, 'Message must be at least 5 characters').max(5000),
-  phone: z.string().min(4).max(20).optional(),
-});
+import { contactSchema } from '@/lib/schemas/contact';
 
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
