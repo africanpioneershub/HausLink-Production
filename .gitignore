@@ -39,6 +39,7 @@ next-env.d.ts
 
 .vercel
 .env*
+!.env.example
 .gstack/
 
 # Claude Code local settings (may contain credentials from terminal command history)
