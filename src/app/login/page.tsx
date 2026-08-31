@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [resendError, setResendError] = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,10 +58,24 @@ export default function LoginPage() {
   async function handleResend() {
     setResending(true);
     setResent(false);
-    const supabase = createBrowserSupabaseClient();
-    await supabase.auth.resend({ type: 'signup', email });
-    setResending(false);
-    setResent(true);
+    setResendError('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setResendError(data.error ?? 'Failed to resend verification email');
+      } else {
+        setResent(true);
+      }
+    } catch {
+      setResendError('Failed to resend verification email');
+    } finally {
+      setResending(false);
+    }
   }
 
   return (
@@ -136,6 +151,9 @@ export default function LoginPage() {
               )}
               {resent && (
                 <p className="mt-2 text-sm text-green-600">Email resent! Check your inbox.</p>
+              )}
+              {resendError && (
+                <p className="mt-2 text-sm text-red-600">{resendError}</p>
               )}
             </div>
           )}

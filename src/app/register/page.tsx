@@ -8,7 +8,6 @@ import { Eye, EyeOff, Check, Home, Building2, Mail } from 'lucide-react';
 import { CountrySelect } from '@/components/auth/CountrySelect';
 import { DEFAULT_COUNTRY, type Country } from '@/lib/countries';
 import { RWANDA_DISTRICTS } from '@/lib/rwanda-districts';
-import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { UserRole } from '@/types';
 
 type Role = Extract<UserRole, 'TENANT' | 'LANDLORD'>;
@@ -61,6 +60,7 @@ function RegisterForm() {
   const [success, setSuccess] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [resendError, setResendError] = useState('');
 
   useEffect(() => {
     const roleParam = searchParams.get('role');
@@ -155,10 +155,24 @@ function RegisterForm() {
   async function handleResend() {
     setResending(true);
     setResent(false);
-    const supabase = createBrowserSupabaseClient();
-    await supabase.auth.resend({ type: 'signup', email: form.email });
-    setResending(false);
-    setResent(true);
+    setResendError('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setResendError(data.error ?? 'Failed to resend verification email');
+      } else {
+        setResent(true);
+      }
+    } catch {
+      setResendError('Failed to resend verification email');
+    } finally {
+      setResending(false);
+    }
   }
 
   if (success) {
@@ -193,6 +207,9 @@ function RegisterForm() {
           </button>
           {resent && (
             <p className="mt-3 text-sm text-green-600">Email resent! Check your inbox.</p>
+          )}
+          {resendError && (
+            <p className="mt-3 text-sm text-red-600">{resendError}</p>
           )}
         </div>
       </main>

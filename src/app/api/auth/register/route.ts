@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabasePublicAuth } from '@/lib/supabase/publicAuth';
 import { prisma } from '@/lib/prisma/client';
 import { sendWelcomeEmail } from '@/lib/email/templates';
 import { sendWhatsAppWelcome } from '@/lib/whatsapp/templates';
@@ -77,27 +78,34 @@ async function handleRegister(request: Request) {
   const fullPhone = `${countryCode}${phone}`;
   const fullWhatsapp = `${whatsappCountryCode}${whatsapp}`;
 
-  let created;
+  let userId: string;
   try {
-    const result = await supabaseAdmin.auth.admin.createUser({
+    // supabaseAdmin.auth.admin.createUser() never sends a confirmation email,
+    // regardless of email_confirm — it only marks the row's confirmation
+    // state. signUp() is what actually triggers Supabase Auth's confirmation
+    // email (relayed through Resend at the project's SMTP layer) with a link
+    // back to emailRedirectTo.
+    const result = await supabasePublicAuth.auth.signUp({
       email,
       password,
-      email_confirm: false,
-      user_metadata: {
-        name,
-        role,
-        status: 'PENDING',
-        kyc_status: 'NOT_SUBMITTED',
-        registration_paid: false,
-        phone: fullPhone,
-        whatsapp: fullWhatsapp,
-        city,
-        district,
+      options: {
+        emailRedirectTo: 'https://hauselink.com/auth/confirm',
+        data: {
+          name,
+          role,
+          status: 'PENDING',
+          kyc_status: 'NOT_SUBMITTED',
+          registration_paid: false,
+          phone: fullPhone,
+          whatsapp: fullWhatsapp,
+          city,
+          district,
+        },
       },
     });
 
     if (result.error || !result.data.user) {
-      console.error('[register] supabaseAdmin.auth.admin.createUser returned an error', {
+      console.error('[register] supabase.auth.signUp returned an error', {
         email,
         error: result.error,
       });
@@ -107,9 +115,9 @@ async function handleRegister(request: Request) {
       );
     }
 
-    created = result.data;
+    userId = result.data.user.id;
   } catch (authError) {
-    console.error('[register] supabaseAdmin.auth.admin.createUser threw an exception', {
+    console.error('[register] supabase.auth.signUp threw an exception', {
       email,
       error: authError,
     });
@@ -122,7 +130,7 @@ async function handleRegister(request: Request) {
   try {
     await prisma.user.create({
       data: {
-        id: created.user.id,
+        id: userId,
         email,
         name,
         phone: fullPhone,
@@ -137,14 +145,14 @@ async function handleRegister(request: Request) {
   } catch (dbError) {
     console.error('[register] Failed to create Prisma user record, rolling back auth user', {
       email,
-      userId: created.user.id,
+      userId,
       error: dbError,
     });
     try {
-      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(userId);
     } catch (rollbackError) {
       console.error('[register] Failed to roll back auth user after DB error', {
-        userId: created.user.id,
+        userId,
         error: rollbackError,
       });
     }
@@ -162,7 +170,7 @@ async function handleRegister(request: Request) {
   );
 
   return NextResponse.json(
-    { success: true, data: { id: created.user.id, email, role } },
+    { success: true, data: { id: userId, email, role } },
     { status: 201 }
   );
 }
