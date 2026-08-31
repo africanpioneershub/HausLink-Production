@@ -4,11 +4,13 @@ title = "HausLink secret scan"
 useDefault = true
 
 [[rules]]
+id = "supabase-jwt"
 description = "Supabase service role / anon JWT"
 regex = '''eyJ[A-Za-z0-9._-]{50,}'''
 tags = ["supabase", "jwt"]
 
 [[rules]]
+id = "generic-api-key"
 description = "Generic API key assignment"
 regex = '''(?i)(api[_-]?key|secret|token)\s*[:=]\s*['"][a-zA-Z0-9_\-]{20,}['"]'''
 tags = ["generic", "secret"]
