@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq';
 import type { Job } from 'bullmq';
-import { bullmqConnection } from '../connection';
+import { getBullmqConnection } from '../connection';
 import { QUEUE_NAMES, type NotificationJobData } from '../queues';
 import { sendNotification } from '@/lib/notifications/sender';
 import { sendRentPaidEmail } from '@/lib/email/templates';
@@ -62,7 +62,7 @@ export function startNotificationWorker(): Worker {
   const worker = new Worker(
     QUEUE_NAMES.NOTIFICATIONS,
     processJob,
-    { connection: bullmqConnection }
+    { connection: getBullmqConnection() }
   );
 
   worker.on('failed', (job, error) => {

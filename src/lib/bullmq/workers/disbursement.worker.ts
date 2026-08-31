@@ -1,5 +1,5 @@
 import { Worker, type Job } from 'bullmq';
-import { bullmqConnection } from '../connection';
+import { getBullmqConnection } from '../connection';
 import { QUEUE_NAMES, type DisbursementJobData } from '../queues';
 import { prisma } from '@/lib/prisma/client';
 import { disburseToLandlord } from '@/lib/payments/momo';
@@ -70,7 +70,7 @@ async function processJob(job: Job) {
 
 export function startDisbursementWorker(): Worker {
   const worker = new Worker(QUEUE_NAMES.DISBURSEMENT, processJob, {
-    connection: bullmqConnection,
+    connection: getBullmqConnection(),
   });
 
   worker.on('failed', (job, error) => {

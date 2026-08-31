@@ -11,6 +11,10 @@
     {
       "path": "/api/jobs/trigger",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/jobs/queue-health",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

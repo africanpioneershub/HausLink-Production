@@ -1,5 +1,74 @@
 # Security Incident Log
 
+## 2026-09-01 — Job Queue Silently Broken for 2+ Months (BullMQ/Redis)
+
+**What happened:**
+Production runtime logs showed `Error: connect ECONNREFUSED 127.0.0.1:6379`
+on `/api/jobs/trigger` — 30 occurrences since 2026-06-25 — plus 5
+`Vercel Runtime Timeout Error: Task timed out after 30 seconds` on the same
+route. This is the daily Vercel Cron (`vercel.json`, `0 6 * * *`) that
+enqueues monthly billing and landlord disbursement jobs.
+
+**Root cause:**
+`src/lib/bullmq/queues.ts` instantiated 3 BullMQ `Queue` objects at
+**module load time** (top-level `new Queue(...)`). Their connection came
+from `src/lib/bullmq/connection.ts`, which read `process.env.REDIS_URL`
+and silently fell back to `redis://localhost:6379` when unset —
+`REDIS_URL` was never set in Vercel's production env vars (only
+`UPSTASH_REDIS_REST_URL`/`TOKEN` existed, a separate REST-based client
+used elsewhere for rate limiting, not BullMQ-compatible). Because
+construction was eager, this fired on every cold start of any route
+importing `queues.ts`, and during Next.js's build-time page-data
+collection — confirmed identically in local build logs before the fix.
+
+**Architectural finding:** the BullMQ `Worker` code (which actually
+processes jobs) is correctly isolated in `src/worker.ts`, a standalone
+entry point (`npm run worker`) — never imported by any Next.js route, so
+there was no "Worker running inside a serverless function" anti-pattern.
+But there was **no deployment configuration anywhere in the repo** for
+that worker process (no `Procfile`/`railway.json`/`render.yaml`/
+`Dockerfile`) — it's unverified whether it has ever run in production.
+Even with Redis reachable, enqueued jobs may have piled up unprocessed
+indefinitely with nothing surfacing that fact.
+
+**Remediation taken:**
+1. ✅ `src/lib/bullmq/connection.ts` / `queues.ts` — Queue construction is
+   now lazy (Proxy-wrapped, matching the existing pattern in
+   `src/lib/supabase/admin.ts`), and a missing `REDIS_URL` throws
+   immediately with a clear message instead of attempting a doomed
+   connection to `127.0.0.1`.
+2. ✅ `src/lib/env-check.ts` — `REDIS_URL` added to the hard-fail list
+   that already gates `SUPABASE_SERVICE_ROLE_KEY` etc.; a missing
+   `REDIS_URL` now blocks the production build/deploy entirely, with a
+   message distinguishing it from `UPSTASH_REDIS_REST_URL`.
+3. ✅ `GET /api/jobs/queue-health` — new route, run every 6h via Vercel
+   Cron, calls `getJobCounts()` on each queue and logs an ERROR-level line
+   (this app has no Sentry/Datadog/similar — `console.error` surfaced via
+   Vercel's runtime logs is the existing alerting mechanism) plus returns
+   HTTP 503 if a queue's `waiting` count exceeds a per-queue threshold —
+   so a dead/unhosted worker is loud within hours, not silent for months.
+4. ✅ `Dockerfile.worker` + `.dockerignore` — deployment scaffolding so
+   `npm run worker` can be pointed at Railway/Render/Fly/a VPS in minutes
+   once that hosting decision is made. No provider was provisioned or
+   chosen — that decision is still open.
+5. ⬜ OPEN: decide where the worker process actually runs, deploy
+   `Dockerfile.worker` there, and set `REDIS_URL` (+ this app's other
+   secrets) in both Vercel and that provider.
+
+**Prevention:**
+A missing/misconfigured env var for a background system (queue, cron,
+worker) must fail the build or alert loudly — never fall back to a
+plausible-looking default (`localhost`) that only fails at the exact
+moment the feature is used. `src/lib/env-check.ts`'s hard-fail-at-build
+pattern and the new `queue-health` route are now the two safety nets for
+this class of bug specifically for BullMQ; the same pattern should be
+applied to any future background system this app adds.
+
+**Status: PARTIALLY RESOLVED — code fix verified, infra deployment
+decision (item 5) still open.**
+
+---
+
 ## 2026-08-31 — Signup Verification Emails Never Sent (SMTP + App-Layer)
 
 **What happened:**

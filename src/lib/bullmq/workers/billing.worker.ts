@@ -1,5 +1,5 @@
 import { Worker, type Job } from 'bullmq';
-import { bullmqConnection } from '../connection';
+import { getBullmqConnection } from '../connection';
 import { QUEUE_NAMES, type BillingJobData, notificationQueue } from '../queues';
 import { prisma } from '@/lib/prisma/client';
 import { generateIdempotencyKey, daysRemaining, formatDate } from '@/lib/utils';
@@ -70,7 +70,7 @@ async function processJob(job: Job) {
 
 export function startBillingWorker(): Worker {
   const worker = new Worker(QUEUE_NAMES.BILLING, processJob, {
-    connection: bullmqConnection,
+    connection: getBullmqConnection(),
   });
 
   worker.on('failed', (job, error) => {

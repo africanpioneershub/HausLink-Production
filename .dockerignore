@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.vercel
+.gstack
+coverage
+*.tsbuildinfo
+npm-debug.log*
+.env
+.env.local
+.env*.local
+supabase/.temp
+supabase/.branches
+tmp-screenshots/

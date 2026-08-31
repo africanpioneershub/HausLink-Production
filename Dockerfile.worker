@@ -1,0 +1,33 @@
+# Long-running BullMQ worker process (npm run worker / src/worker.ts) that
+# consumes the notification, billing, and disbursement queues enqueued by
+# the Vercel-deployed app's /api/jobs/trigger cron. This must run as an
+# always-on process -- it cannot live inside a Vercel serverless function,
+# which is ephemeral and never stays alive to poll a queue. See
+# docs/INCIDENT_LOG.md for the incident that made this explicit.
+#
+# Chosen over a provider-specific config (railway.json / render.yaml) for
+# portability: this one Dockerfile deploys unchanged to Railway, Render,
+# Fly.io, or any VPS that runs containers, with no provider lock-in.
+#
+# Build:  docker build -f Dockerfile.worker -t hauslink-worker .
+# Run:    docker run --env-file .env hauslink-worker
+#
+# Required environment variables at minimum: REDIS_URL, DATABASE_URL,
+# DIRECT_URL, plus whatever the worker's job handlers touch (Resend,
+# WhatsApp, MoMo/Airtel credentials) -- see .env.example for the full list.
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first so this layer is cached across builds that
+# only change application code.
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+RUN npm install
+
+COPY . .
+
+# Runs as the same npm script used in local development
+# (npx ts-node --esm src/worker.ts), so there is no separate build step to
+# keep in sync with the app.
+CMD ["npm", "run", "worker"]
