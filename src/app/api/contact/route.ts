@@ -42,12 +42,21 @@ export async function POST(request: Request) {
 
   const { name, email, subject, message, phone } = sanitizeObject(parsed.data as Record<string, unknown>) as typeof parsed.data;
 
-  sendContactFormEmail({ name, email, subject, message }).catch((error) =>
-    console.error('[contact] Email failed', error)
-  );
+  const emailSent = await sendContactFormEmail({ name, email, subject, message }).catch((error) => {
+    console.error('[contact] Email failed', error);
+    return false;
+  });
+
   if (phone) {
     sendWhatsAppContactConfirmation({ phone, name }).catch((error) =>
       console.error('[contact] WhatsApp failed', error)
+    );
+  }
+
+  if (!emailSent) {
+    return NextResponse.json(
+      { success: false, error: 'Failed to send your message. Please try again.', code: 'EMAIL_SEND_FAILED' },
+      { status: 502 }
     );
   }
 

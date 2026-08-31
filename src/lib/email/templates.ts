@@ -1,16 +1,20 @@
 import { resend } from './client';
 
-const FROM = process.env.RESEND_FROM || 'HausLink <noreply@contact.hauselink.com>';
+const FROM = process.env.RESEND_FROM || 'HausLink <noreply@hauselink.com>';
 const SUPPORT_EMAIL = 'afriprimeholdings@gmail.com';
+const REPLY_TO = process.env.RESEND_REPLY_TO || SUPPORT_EMAIL;
 
-async function send(to: string, subject: string, html: string) {
+async function send(to: string, subject: string, html: string): Promise<boolean> {
   try {
-     const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html, replyTo: REPLY_TO });
     if (error) {
       console.error('[Email] Failed to send', { to, subject, error });
+      return false;
     }
+    return true;
   } catch (error) {
-      console.error('[Email] Failed to send (unexpected)', { to, subject, error });
+    console.error('[Email] Failed to send (unexpected)', { to, subject, error });
+    return false;
   }
 }
 
@@ -29,7 +33,7 @@ export async function sendWelcomeEmail({
       ? 'Next, complete your KYC verification and registration payment to start listing properties.'
       : 'Next, complete your KYC verification so you can apply for properties.';
 
-  await send(
+  return send(
     email,
     'Welcome to HausLink!',
     `<p>Hi ${name},</p>
@@ -53,7 +57,7 @@ export async function sendAccountApprovedEmail({
       ? 'Upload your ID to start listing properties.'
       : 'Browse and save properties.';
 
-  await send(
+  return send(
     email,
     'Your HausLink account is approved!',
     `<p>Great news ${name}!</p>
@@ -73,7 +77,7 @@ export async function sendAccountRejectedEmail({
   email: string;
   reason: string;
 }) {
-  await send(
+  return send(
     email,
     'HausLink account update',
     `<p>Hi ${name},</p>
@@ -92,7 +96,7 @@ export async function sendKYCApprovedEmail({
   email: string;
   phone?: string;
 }) {
-  await send(
+  return send(
     email,
     'Your HausLink account is verified!',
     `<p>Hi ${name},</p>
@@ -112,7 +116,7 @@ export async function sendKYCRejectedEmail({
   phone?: string;
   reason: string;
 }) {
-  await send(
+  return send(
     email,
     'Action required: HausLink verification',
     `<p>Hi ${name},</p>
@@ -145,7 +149,7 @@ export async function sendApplicationStatusEmail({
          ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
          <p>Browse other properties at <a href="https://hauselink.com/properties">hauselink.com</a>.</p>`;
 
-  await send(
+  return send(
     tenantEmail,
     `Application update for ${propertyTitle}`,
     `<p>Hi ${tenantName},</p>${body}<p>— The HausLink Team</p>`
@@ -166,7 +170,7 @@ export async function sendRentDueEmail({
   amount: number;
   dueDate: string;
 }) {
-  await send(
+  return send(
     tenantEmail,
     `Rent payment due: ${propertyTitle}`,
     `<p>Hi ${tenantName},</p>
@@ -198,7 +202,7 @@ export async function sendRentPaidEmail({
 }) {
   const formattedAmount = `RWF ${amount.toLocaleString('en-US')}`;
 
-  await send(
+  const tenantOk = await send(
     tenantEmail,
     `Rent payment confirmed: ${propertyTitle}`,
     `<p>Hi ${tenantName},</p>
@@ -207,7 +211,7 @@ export async function sendRentPaidEmail({
      <p>— The HausLink Team</p>`
   );
 
-  await send(
+  const landlordOk = await send(
     landlordEmail,
     `Rent payment confirmed: ${propertyTitle}`,
     `<p>Hi ${landlordName},</p>
@@ -215,6 +219,8 @@ export async function sendRentPaidEmail({
      <p>Reference: ${transactionRef}</p>
      <p>— The HausLink Team</p>`
   );
+
+  return tenantOk && landlordOk;
 }
 
 export async function sendMaintenanceUpdateEmail({
@@ -231,7 +237,7 @@ export async function sendMaintenanceUpdateEmail({
   status: string;
   note?: string;
 }) {
-  await send(
+  return send(
     tenantEmail,
     'Maintenance request update',
     `<p>Hi ${tenantName},</p>
@@ -255,7 +261,7 @@ export async function sendLeaseExpiryEmail({
   daysRemaining: number;
   endDate: string;
 }) {
-  await send(
+  return send(
     tenantEmail,
     `Your lease expires in ${daysRemaining} days`,
     `<p>Hi ${tenantName},</p>
@@ -274,7 +280,7 @@ export async function sendPropertyApprovedEmail({
   email: string;
   propertyTitle: string;
 }) {
-  await send(
+  return send(
     email,
     'Your property is now live on HausLink!',
     `<p>Hi ${name},</p>
@@ -298,7 +304,7 @@ export async function sendNewApplicationEmail({
   propertyTitle: string;
   applicationLink: string;
 }) {
-  await send(
+  return send(
     landlordEmail,
     `New rental application for ${propertyTitle}`,
     `<p>Hi ${landlordName},</p>
@@ -321,7 +327,7 @@ export async function sendKYCSubmittedAdminEmail({
   documentType: string;
 }) {
   const adminEmail = process.env.ADMIN_EMAIL ?? 'afriprimeholdings@gmail.com';
-  await send(
+  return send(
     adminEmail,
     'New KYC submission requires review',
     `<p>A new KYC document has been submitted and requires your review.</p>
@@ -344,7 +350,7 @@ export async function sendContactFormEmail({
   subject: string;
   message: string;
 }) {
-  await send(
+  return send(
     SUPPORT_EMAIL,
     `New contact: ${subject}`,
     `<p><strong>From:</strong> ${name} (${email})</p>
