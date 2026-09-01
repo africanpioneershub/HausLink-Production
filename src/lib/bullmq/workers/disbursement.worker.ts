@@ -5,7 +5,9 @@ import { prisma } from '@/lib/prisma/client';
 import { disburseToLandlord } from '@/lib/payments/momo';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/client';
 
-async function processLedgerEntry(ledgerEntryId: string) {
+// Exported for direct unit testing of the KYC gate below, without needing
+// to spin up a real BullMQ Worker.
+export async function processLedgerEntry(ledgerEntryId: string) {
   const ledgerEntry = await prisma.ledgerEntry.findUnique({
     where: { id: ledgerEntryId },
     include: { payment: { include: { landlord: { include: { preferences: true } } } } },
@@ -14,6 +16,24 @@ async function processLedgerEntry(ledgerEntryId: string) {
   if (!ledgerEntry || ledgerEntry.disbursement_status !== 'PENDING') return;
 
   const landlord = ledgerEntry.payment.landlord;
+
+  // KYC is enforced here, at the point of actual financial risk, rather
+  // than at registration (see docs/INCIDENT_LOG.md) -- a landlord can be
+  // fully ACTIVE and list/manage properties without verified KYC, but must
+  // never receive a payout without it. Fail loudly rather than silently
+  // skip or silently pay out: this must never be a quiet no-op.
+  if (landlord.kyc_status !== 'APPROVED') {
+    console.error(
+      '[disbursement.worker] Blocking disbursement -- landlord KYC not verified',
+      { landlordId: landlord.id, kycStatus: landlord.kyc_status, ledgerEntryId: ledgerEntry.id }
+    );
+    await prisma.ledgerEntry.update({
+      where: { id: ledgerEntry.id },
+      data: { disbursement_status: 'FAILED' },
+    });
+    return;
+  }
+
   const phoneNumber = landlord.preferences?.payout_momo_number ?? landlord.phone;
 
   if (!phoneNumber) {

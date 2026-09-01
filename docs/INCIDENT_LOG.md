@@ -1,5 +1,78 @@
 # Security Incident Log
 
+## 2026-09-01 — Design Change: Email Verification Activates Accounts; KYC Enforced at Payout
+
+**What changed:**
+Previously (commit `c74f95b`, "redesign registration flow - 2-step signup,
+admin account approval, deferred KYC upload"): a user registered, verified
+their email, then sat in `User.status: 'PENDING'` until an admin manually
+approved them via `POST /api/admin/users/[userId]/approve-registration`.
+Only then did `middleware.ts` let them past `/onboarding/account-pending`
+into their dashboard. In practice this gate was rarely exercised: at the
+time of this change, only 4 accounts had ever reached `ACTIVE`, 22 sat
+`PENDING`, and 3 of those 22 had a genuinely confirmed email — including a
+real landlord signup (`mandelajam@gmail.com`) stuck since 2026-06-24, over
+two months, because nobody ever manually approved them.
+
+**Why:** the admin-approval gate protected against the wrong risk at the
+wrong time. It blocked *all* access (including harmless actions like
+browsing) behind a manual step nobody reliably performed, while the actual
+point of real risk -- a landlord receiving money -- had no KYC check at
+all before this change. Moving the check to payout-time is a stronger
+place to put it for a fintech-adjacent flow (verified identity right
+before money moves, not a one-time gate at signup that says nothing about
+whether the account is still trustworthy later) *and* removes a manual
+step that was clearly not being operated reliably.
+
+**What changed, concretely:**
+1. `src/app/api/auth/activate/route.ts` (new) — called by `/auth/confirm`
+   immediately after a user establishes a session via email confirmation.
+   Sets `User.status` (Prisma) and `user_metadata.status` (Supabase) to
+   `'ACTIVE'` -- the exact value `approve-registration` already used, reused
+   rather than inventing a new one. This is a best-effort sync for
+   dashboards/audit, not the real gate: Supabase's own "email must be
+   confirmed to sign in" check is what actually protects `/login` now, and
+   by the time a request reaches `middleware.ts` that's already true.
+2. `src/middleware.ts` — the `ACCOUNT_ACTIVE` extra-gate (the `PENDING` →
+   `/onboarding/account-pending` redirect) removed from `/tenant` and
+   `/landlord`. `REGISTRATION_PAID` (landlord registration fee) and
+   `TWO_FA_VERIFIED` (admin 2FA) are unrelated and untouched.
+3. `src/lib/bullmq/workers/disbursement.worker.ts` — **the actual security
+   enforcement point**. `processLedgerEntry()` now blocks any disbursement
+   where `landlord.kyc_status !== 'APPROVED'`, logging an ERROR-level line
+   (this app's existing alerting mechanism -- see the BullMQ/Redis entry
+   above) and marking the ledger entry `disbursement_status: 'FAILED'`
+   -- the same fail-loudly pattern already used in this function for a
+   missing payout phone number. This is the one path all disbursements
+   funnel through (the daily cron's bulk sweep and any future
+   single-entry-targeted job both call `processLedgerEntry`), so this one
+   check covers 100% of live disbursement code. `kyc_status: 'APPROVED'`
+   is set by the existing, already-working KYC review flow
+   (`POST /api/kyc/submit` → admin review → `POST /api/admin/kyc/[userId]/approve`)
+   -- confirmed working, not assumed.
+4. `src/app/api/admin/users/[userId]/approve-registration/route.ts` and
+   `src/app/onboarding/account-pending/page.tsx` are left in place,
+   unreferenced by the new flow. The approve route does more than flip
+   status (clears caches, writes an audit log, sends an "approved"
+   email/WhatsApp) so it isn't pure dead code -- an admin could still call
+   it manually (e.g. via the `/admin/users` "Pending Approval" tab, also
+   left as-is) without anything breaking, it would just be redundant for
+   an already-active user.
+5. Related, found but explicitly out of scope: `disburseAirtelToLandlord`
+   in `src/lib/payments/airtel.ts` is defined but never called anywhere --
+   the disbursement worker only ever pays out via MoMo regardless of a
+   landlord's actual payout method preference. Pre-existing, unrelated to
+   this change, not fixed here.
+
+**Data at time of change:** 22 `PENDING` users, 3 with a confirmed email
+(would become eligible for activation the instant this ships). Reported to
+the team; retroactive activation of those 3 was deliberately left as a
+separate decision, not bundled into this change.
+
+**Status: DONE.**
+
+---
+
 ## 2026-09-01 — Job Queue Silently Broken for 2+ Months (BullMQ/Redis)
 
 **What happened:**

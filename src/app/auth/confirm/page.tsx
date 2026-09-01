@@ -55,6 +55,27 @@ function AuthConfirmContent() {
         return;
       }
 
+      // Email is now verified and a session is established. Activate the
+      // account immediately -- email verification alone is sufficient for
+      // full access now (see docs/INCIDENT_LOG.md). This call is a
+      // best-effort sync of the status field for dashboards/audit only:
+      // Supabase's own confirmed-email-required-to-sign-in check is the
+      // real access gate, so a failure here does not block the user or
+      // change the "verified" outcome shown below.
+      try {
+        const csrfRes = await fetch('/api/csrf');
+        const { token } = await csrfRes.json();
+        const activateRes = await fetch('/api/auth/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': token ?? '' },
+        });
+        if (!activateRes.ok) {
+          console.error('[auth/confirm] Activation failed', await activateRes.json().catch(() => null));
+        }
+      } catch (activationError) {
+        console.error('[auth/confirm] Activation request failed', activationError);
+      }
+
       setStatus('success');
       setTimeout(() => {
         router.push('/login');
