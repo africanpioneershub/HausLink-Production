@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthRetryableFetchError } from '@supabase/supabase-js';
 
 vi.mock('@/lib/redis/ratelimit', () => ({
   authRateLimit: {},
@@ -54,6 +55,24 @@ describe('POST /api/auth/resend-verification', () => {
     expect(json.success).toBe(false);
     expect(json.code).toBe('RESEND_FAILED');
   });
+
+  it('retries a transient AuthRetryableFetchError and succeeds on the next attempt', async () => {
+    resend
+      .mockResolvedValueOnce({ error: new AuthRetryableFetchError('{}', 500) })
+      .mockResolvedValueOnce({ error: null });
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('http://localhost/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'stuck@example.com' }),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(resend).toHaveBeenCalledTimes(2);
+  }, 10000);
 
   it('rejects an invalid email without calling Supabase', async () => {
     const { POST } = await import('./route');

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { supabasePublicAuth } from '@/lib/supabase/publicAuth';
+import { serializeAuthError, withAuthRetry } from '@/lib/supabase/authError';
 import { prisma } from '@/lib/prisma/client';
 import { sendWelcomeEmail } from '@/lib/email/templates';
 import { sendWhatsAppWelcome } from '@/lib/whatsapp/templates';
@@ -85,29 +86,31 @@ async function handleRegister(request: Request) {
     // state. signUp() is what actually triggers Supabase Auth's confirmation
     // email (relayed through Resend at the project's SMTP layer) with a link
     // back to emailRedirectTo.
-    const result = await supabasePublicAuth.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: 'https://hauselink.com/auth/confirm',
-        data: {
-          name,
-          role,
-          status: 'PENDING',
-          kyc_status: 'NOT_SUBMITTED',
-          registration_paid: false,
-          phone: fullPhone,
-          whatsapp: fullWhatsapp,
-          city,
-          district,
+    const result = await withAuthRetry(() =>
+      supabasePublicAuth.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: 'https://hauselink.com/auth/confirm',
+          data: {
+            name,
+            role,
+            status: 'PENDING',
+            kyc_status: 'NOT_SUBMITTED',
+            registration_paid: false,
+            phone: fullPhone,
+            whatsapp: fullWhatsapp,
+            city,
+            district,
+          },
         },
-      },
-    });
+      })
+    );
 
     if (result.error || !result.data.user) {
       console.error('[register] supabase.auth.signUp returned an error', {
         email,
-        error: result.error,
+        error: serializeAuthError(result.error),
       });
       return NextResponse.json(
         { success: false, error: result.error?.message ?? 'Failed to create account', code: 'AUTH_ERROR' },
@@ -119,7 +122,7 @@ async function handleRegister(request: Request) {
   } catch (authError) {
     console.error('[register] supabase.auth.signUp threw an exception', {
       email,
-      error: authError,
+      error: serializeAuthError(authError),
     });
     return NextResponse.json(
       { success: false, error: 'Failed to reach the authentication service. Please try again.', code: 'AUTH_UNREACHABLE' },

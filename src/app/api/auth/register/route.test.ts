@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js';
 
 vi.mock('@/lib/redis/ratelimit', () => ({
   authRateLimit: {},
@@ -92,5 +93,56 @@ describe('POST /api/auth/register', () => {
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.code).toBe('AUTH_ERROR');
+  });
+
+  it('retries a transient AuthRetryableFetchError and succeeds on the next attempt', async () => {
+    signUp
+      .mockResolvedValueOnce({ data: { user: null }, error: new AuthRetryableFetchError('{}', 500) })
+      .mockResolvedValueOnce({ data: { user: { id: 'user-1' } }, error: null });
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('http://localhost/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validPayload),
+      })
+    );
+
+    expect(res.status).toBe(201);
+    expect(signUp).toHaveBeenCalledTimes(2);
+  }, 10000);
+
+  it('does not retry a real (non-transient) AuthApiError, and logs a fully diagnosable error object instead of {}', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    signUp.mockResolvedValue({
+      data: { user: null },
+      error: new AuthApiError('User already registered', 422, 'user_already_exists'),
+    });
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('http://localhost/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validPayload),
+      })
+    );
+
+    expect(res.status).toBe(400);
+    expect(signUp).toHaveBeenCalledTimes(1);
+
+    const loggedCall = errorSpy.mock.calls.find(
+      (call) => call[0] === '[register] supabase.auth.signUp returned an error'
+    );
+    expect(loggedCall).toBeDefined();
+    const loggedError = (loggedCall![1] as { error: Record<string, unknown> }).error;
+    // The original bug: logging the raw Error instance collapsed to {}
+    // once serialized. This must never regress to that.
+    expect(loggedError.status).toBe(422);
+    expect(loggedError.code).toBe('user_already_exists');
+    expect(loggedError.message).toBe('User already registered');
+
+    errorSpy.mockRestore();
   });
 });
