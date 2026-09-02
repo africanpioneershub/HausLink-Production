@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/auth/withAuth';
+import { getClientIp } from '@/lib/admin-guard';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { AUDIT_ACTIONS } from '@/lib/constants';
@@ -41,7 +42,7 @@ export const POST = withAuth(['ADMIN'])(
       entityType: 'ReportFlag',
       entityId: id,
       adminId: admin.id,
-      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+      ipAddress: getClientIp(request) || undefined,
     });
 
     return NextResponse.json({ success: true, data: updated });

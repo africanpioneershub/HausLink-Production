@@ -53,3 +53,6 @@ scripts/.env.scripts
 # Temporary working files
 tmp-prop-id.txt
 tmp-screenshots/
+
+.vercel
+.env*

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
+import { getClientIp } from '@/lib/admin-guard';
 import { updateAppMetadata } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
@@ -32,7 +33,7 @@ export const POST = withAuth(['ADMIN'])(
       entityType: 'User',
       entityId: userId,
       adminId: admin.id,
-      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+      ipAddress: getClientIp(request) || undefined,
     });
 
     const role = targetUser.role as 'TENANT' | 'LANDLORD';

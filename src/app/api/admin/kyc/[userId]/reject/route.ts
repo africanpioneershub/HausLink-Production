@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
+import { getClientIp } from '@/lib/admin-guard';
 import { updateAppMetadata } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
@@ -23,20 +24,35 @@ export const POST = withAuth(['ADMIN'])(
     const body = await request.json().catch(() => ({}));
     const reason = typeof body?.reason === 'string' ? body.reason : undefined;
 
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: userId },
+    // Same server-side precondition as approve: the admin UI only shows
+    // Reject when kyc_status is PENDING, which is a display convenience,
+    // not a security boundary. The user update's WHERE clause is the
+    // actual concurrency guard.
+    let rejected = false;
+    await prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: { id: userId, kyc_status: 'PENDING' },
         data: { kyc_status: 'REJECTED' },
-      }),
-      prisma.kYCDocument.updateMany({
+      });
+      if (count === 0) return;
+      rejected = true;
+
+      await tx.kYCDocument.updateMany({
         where: { user_id: userId, review_status: 'PENDING' },
         data: {
           review_status: 'REJECTED',
           reviewed_by: admin.id,
           reviewed_at: new Date(),
         },
-      }),
-    ]);
+      });
+    });
+
+    if (!rejected) {
+      return NextResponse.json(
+        { success: false, error: 'This user does not have a pending KYC review', code: 'NOT_PENDING' },
+        { status: 409 }
+      );
+    }
 
     await updateAppMetadata(userId, { kyc_status: 'REJECTED' });
 
@@ -47,7 +63,7 @@ export const POST = withAuth(['ADMIN'])(
       entityType: 'User',
       entityId: userId,
       adminId: admin.id,
-      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+      ipAddress: getClientIp(request) || undefined,
       metadata: reason ? { reason } : undefined,
     });
 

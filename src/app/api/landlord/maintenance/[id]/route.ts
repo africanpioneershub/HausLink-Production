@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
+import { sendMaintenanceUpdateEmail } from '@/lib/email/templates';
+import { sendWhatsAppMaintenanceUpdate } from '@/lib/whatsapp/templates';
 
 const updateSchema = z.object({
   status: z.enum(['PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']),
@@ -35,6 +37,33 @@ export const PATCH = withAuth(['LANDLORD'])(
         resolved_at: parsed.data.status === 'RESOLVED' ? new Date() : maintenanceRequest.resolved_at,
       },
     });
+
+    // The admin-only "assign" action already notified the tenant on its
+    // own status change; this is the actual landlord-facing path every
+    // maintenance request normally goes through, and it never notified
+    // anyone -- same non-blocking fire-and-forget pattern as everywhere
+    // else notifications are sent from a request path.
+    if (updated.status !== maintenanceRequest.status) {
+      const tenant = await prisma.user.findUnique({ where: { id: maintenanceRequest.tenant_id } });
+      if (tenant) {
+        sendMaintenanceUpdateEmail({
+          tenantName: tenant.name ?? 'there',
+          tenantEmail: tenant.email,
+          requestTitle: maintenanceRequest.title,
+          status: updated.status,
+        }).catch((error) => console.error('[landlord maintenance update] Email failed', error));
+
+        const whatsappPhone = tenant.whatsapp ?? tenant.phone;
+        if (whatsappPhone) {
+          sendWhatsAppMaintenanceUpdate({
+            phone: whatsappPhone,
+            tenantName: tenant.name ?? 'there',
+            requestTitle: maintenanceRequest.title,
+            status: updated.status,
+          }).catch((error) => console.error('[landlord maintenance update] WhatsApp failed', error));
+        }
+      }
+    }
 
     return NextResponse.json({ success: true, data: updated });
   }

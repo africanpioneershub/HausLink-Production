@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { withAuth } from '@/lib/auth/withAuth';
 import { prisma } from '@/lib/prisma/client';
+import { getClientIp } from '@/lib/admin-guard';
 import { generateIdempotencyKey } from '@/lib/utils';
 import { initiateMoMoPayment } from '@/lib/payments/momo';
 import { initiateAirtelPayment } from '@/lib/payments/airtel';
@@ -110,18 +112,50 @@ export const POST = withAuth(['TENANT'])(
     const idempotencyKey = generateIdempotencyKey();
     const description = `Rent payment for ${tenancy.property.title}`;
 
-    const payment = await prisma.payment.create({
-      data: {
-        tenant_id: tenancy.tenant_id,
-        landlord_id: tenancy.landlord_id,
-        tenancy_id: tenancy.id,
-        type: 'MONTHLY_RENT',
-        status: 'PENDING',
-        method,
-        amount_rwf: amount,
-        idempotency_key: idempotencyKey,
-      },
-    });
+    let payment;
+    try {
+      payment = await prisma.payment.create({
+        data: {
+          tenant_id: tenancy.tenant_id,
+          landlord_id: tenancy.landlord_id,
+          tenancy_id: tenancy.id,
+          type: 'MONTHLY_RENT',
+          status: 'PENDING',
+          method,
+          amount_rwf: amount,
+          idempotency_key: idempotencyKey,
+        },
+      });
+    } catch (error) {
+      // The findFirst check above is a fast-path optimization, not the
+      // actual concurrency guard -- that's the partial unique index on
+      // (tenant_id, tenancy_id, type) WHERE status = 'PENDING' (see
+      // supabase/migrations/20260903000000_prevent_duplicate_pending_payment.sql).
+      // A concurrent request can still win the race between that read and
+      // this insert; when it does, Postgres raises a unique violation
+      // (P2002) here instead of letting a second PENDING payment through.
+      // Rather than 500 the losing request, return whichever payment
+      // actually won.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const winner = await prisma.payment.findFirst({
+          where: { tenant_id: user.id, tenancy_id: tenancy.id, status: 'PENDING', type: 'MONTHLY_RENT' },
+          orderBy: { created_at: 'desc' },
+        });
+        if (winner) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              paymentId: winner.id,
+              status: 'PENDING',
+              method: winner.method,
+              amount: winner.amount_rwf,
+              instructions: buildInstructions(winner.method as 'MTN_MOMO' | 'AIRTEL_MONEY'),
+            },
+          });
+        }
+      }
+      throw error;
+    }
 
     const result =
       method === 'MTN_MOMO'
@@ -161,7 +195,7 @@ export const POST = withAuth(['TENANT'])(
         action: AUDIT_ACTIONS.PAYMENT_INITIATED,
         entity_type: 'Payment',
         entity_id: payment.id,
-        ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined,
+        ip_address: getClientIp(request) || undefined,
         metadata: { method, amount, tenancy_id: tenancyId },
       },
     }).catch(() => {});

@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/lib/http/fetchWithTimeout';
+
 type AirtelPaymentStatus = 'PENDING' | 'SUCCESSFUL' | 'FAILED';
 
 interface InitiateAirtelPaymentParams {
@@ -53,7 +55,7 @@ async function getAirtelAccessToken(): Promise<string> {
   const clientId = process.env.AIRTEL_CLIENT_ID;
   const clientSecret = process.env.AIRTEL_CLIENT_SECRET;
 
-  const res = await fetch(`${baseUrl}/auth/oauth2/token`, {
+  const res = await fetchWithTimeout(`${baseUrl}/auth/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -102,7 +104,7 @@ export async function initiateAirtelPayment({
   try {
     const token = await getAirtelAccessToken();
 
-    const res = await fetch(`${baseUrl}/merchant/v2/payments/`, {
+    const res = await fetchWithTimeout(`${baseUrl}/merchant/v2/payments/`, {
       method: 'POST',
       headers: {
         ...authHeaders(token),
@@ -154,7 +156,7 @@ export async function getAirtelPaymentStatus(transactionId: string): Promise<Air
   try {
     const token = await getAirtelAccessToken();
 
-    const res = await fetch(`${baseUrl}/standard/v1/payments/${transactionId}`, {
+    const res = await fetchWithTimeout(`${baseUrl}/standard/v1/payments/${transactionId}`, {
       method: 'GET',
       headers: authHeaders(token),
     });
@@ -193,7 +195,7 @@ export async function disburseAirtelToLandlord({
   try {
     const token = await getAirtelAccessToken();
 
-    const res = await fetch(`${baseUrl}/standard/v1/disbursements/`, {
+    const res = await fetchWithTimeout(`${baseUrl}/standard/v1/disbursements/`, {
       method: 'POST',
       headers: {
         ...authHeaders(token),

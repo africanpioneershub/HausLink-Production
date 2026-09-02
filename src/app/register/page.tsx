@@ -189,7 +189,7 @@ function RegisterForm() {
             verification link to activate your account.
           </p>
           <p className="text-sm text-gray-500 mb-6">
-            Once verified, our admin team will review and approve your account within 24 hours.
+            Once verified, you&apos;ll have full access right away — no additional approval needed.
           </p>
           <button
             onClick={() => router.push('/login')}

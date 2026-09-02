@@ -21,8 +21,12 @@
 -- present after any future push, or migrate this project to tracked
 -- migrations if that becomes a recurring concern.
 --
--- NOT APPLIED. Review only -- do not run against the live project without
--- explicit go-ahead.
+-- STATUS: already applied directly against the linked production project
+-- (utptsrquhrliolnwihzb) via `supabase db query --linked` on 2026-09-02.
+-- Verified via pg_indexes that both indexes exist post-apply. Kept here as
+-- the reproducible record of what ran, and to apply the same fix to any
+-- environment this hasn't reached yet (IF NOT EXISTS makes it safe to
+-- re-run).
 
 CREATE UNIQUE INDEX IF NOT EXISTS tenancies_one_active_per_property
   ON public.tenancies (property_id)

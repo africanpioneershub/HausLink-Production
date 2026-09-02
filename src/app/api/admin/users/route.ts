@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { withAuth } from '@/lib/auth/withAuth';
+import { getClientIp } from '@/lib/admin-guard';
 import { supabaseAdmin, updateAppMetadata } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
@@ -95,7 +96,7 @@ export const PATCH = withAuth(['ADMIN'])(
       entityType: 'User',
       entityId: userId,
       adminId: admin.id,
-      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+      ipAddress: getClientIp(request) || undefined,
       metadata: { newStatus: status },
     });
 

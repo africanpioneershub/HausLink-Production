@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/lib/http/fetchWithTimeout';
+
 type MoMoProduct = 'collection' | 'disbursement';
 type MoMoPaymentStatus = 'PENDING' | 'SUCCESSFUL' | 'FAILED';
 
@@ -62,7 +64,7 @@ async function getMoMoAccessToken(product: MoMoProduct = 'collection'): Promise<
 
   const credentials = Buffer.from(`${apiUser}:${apiKey}`).toString('base64');
 
-  const res = await fetch(`${baseUrl}/${product}/token/`, {
+  const res = await fetchWithTimeout(`${baseUrl}/${product}/token/`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${credentials}`,
@@ -110,7 +112,7 @@ export async function initiateMoMoPayment({
   try {
     const token = await getMoMoAccessToken('collection');
 
-    const res = await fetch(`${baseUrl}/collection/v1_0/requesttopay`, {
+    const res = await fetchWithTimeout(`${baseUrl}/collection/v1_0/requesttopay`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -156,7 +158,7 @@ export async function getMoMoPaymentStatus(referenceId: string): Promise<MoMoPay
   try {
     const token = await getMoMoAccessToken('collection');
 
-    const res = await fetch(`${baseUrl}/collection/v1_0/requesttopay/${referenceId}`, {
+    const res = await fetchWithTimeout(`${baseUrl}/collection/v1_0/requesttopay/${referenceId}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -200,7 +202,7 @@ export async function disburseToLandlord({
   try {
     const token = await getMoMoAccessToken('disbursement');
 
-    const res = await fetch(`${baseUrl}/disbursement/v1_0/transfer`, {
+    const res = await fetchWithTimeout(`${baseUrl}/disbursement/v1_0/transfer`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

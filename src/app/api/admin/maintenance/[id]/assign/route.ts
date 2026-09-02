@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
+import { getClientIp } from '@/lib/admin-guard';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { AUDIT_ACTIONS } from '@/lib/constants';
@@ -32,7 +33,7 @@ export const POST = withAuth(['ADMIN'])(
       entityId: id,
       adminId: admin.id,
       userId: maintenanceRequest.tenant_id,
-      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+      ipAddress: getClientIp(request) || undefined,
       metadata: note ? { note } : undefined,
     });
 

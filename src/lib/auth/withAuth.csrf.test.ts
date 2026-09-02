@@ -9,7 +9,7 @@ const getUser = vi.fn();
 vi.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: () => ({ auth: { getUser: (...args: unknown[]) => getUser(...args) } }),
 }));
-vi.mock('@/lib/admin-guard', () => ({ isAdminIpAllowed: () => true }));
+vi.mock('@/lib/admin-guard', () => ({ isAdminIpAllowed: () => true, getClientIp: () => '203.0.113.9' }));
 vi.mock('@/lib/redis/client', () => ({ redis: { get: vi.fn().mockResolvedValue('1') } }));
 
 function makeRequest(cookieToken: string | null, headerToken: string | null) {

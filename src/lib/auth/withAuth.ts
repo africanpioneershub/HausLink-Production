@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { UserRole } from '@/types';
-import { isAdminIpAllowed } from '@/lib/admin-guard';
+import { isAdminIpAllowed, getClientIp } from '@/lib/admin-guard';
 import { validateCsrfToken, getCookieValue, CSRF_COOKIE_NAME } from '@/lib/csrf';
 import { redis } from '@/lib/redis/client';
 
@@ -69,7 +69,7 @@ export function withAuth(allowedRoles: UserRole[]) {
           const is2faBootstrapRoute = TWO_FA_BOOTSTRAP_ROUTES.has(url.pathname);
 
           if (!is2faBootstrapRoute) {
-            const ip = (request as Request & { headers: Headers }).headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
+            const ip = getClientIp(request);
             if (!isAdminIpAllowed(ip)) {
               return NextResponse.json(
                 { success: false, error: 'Forbidden', code: 'IP_NOT_ALLOWED' },

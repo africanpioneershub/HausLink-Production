@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
 import { AUDIT_ACTIONS } from '@/lib/constants';
+import { getClientIp } from '@/lib/admin-guard';
 
 export const POST = withAuth(['ADMIN'])(
   async (request, context, admin) => {
@@ -29,7 +30,7 @@ export const POST = withAuth(['ADMIN'])(
       entityType: 'User',
       entityId: userId,
       adminId: admin.id,
-      ipAddress: request.headers.get('x-forwarded-for') ?? undefined,
+      ipAddress: getClientIp(request) || undefined,
     });
 
     return NextResponse.json({ success: true, data: { userId, status: 'BANNED' } });

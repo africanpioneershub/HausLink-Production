@@ -35,7 +35,7 @@ vi.mock('@/lib/csrf', () => ({
   getCookieValue: () => 'test-token',
   CSRF_COOKIE_NAME: 'csrf_token',
 }));
-vi.mock('@/lib/admin-guard', () => ({ isAdminIpAllowed: () => true }));
+vi.mock('@/lib/admin-guard', () => ({ isAdminIpAllowed: () => true, getClientIp: () => '203.0.113.9' }));
 vi.mock('@/lib/redis/client', () => ({ redis: { get: vi.fn().mockResolvedValue('1') } }));
 
 function makeRequest(query = '') {
