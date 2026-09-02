@@ -28,10 +28,10 @@ export function useAuth() {
         setUser({
           id: user.id,
           email: user.email!,
-          role: user.user_metadata?.role as UserRole,
-          status: user.user_metadata?.status as UserStatus,
-          kyc_status: user.user_metadata?.kyc_status as KYCStatus,
-          registration_paid: user.user_metadata?.registration_paid ?? false,
+          role: user.app_metadata?.role as UserRole,
+          status: user.app_metadata?.status as UserStatus,
+          kyc_status: user.app_metadata?.kyc_status as KYCStatus,
+          registration_paid: user.app_metadata?.registration_paid ?? false,
           name: user.user_metadata?.name,
         });
       }
@@ -44,10 +44,10 @@ export function useAuth() {
           setUser({
             id: session.user.id,
             email: session.user.email!,
-            role: session.user.user_metadata?.role as UserRole,
-            status: session.user.user_metadata?.status as UserStatus,
-            kyc_status: session.user.user_metadata?.kyc_status as KYCStatus,
-            registration_paid: session.user.user_metadata?.registration_paid ?? false,
+            role: session.user.app_metadata?.role as UserRole,
+            status: session.user.app_metadata?.status as UserStatus,
+            kyc_status: session.user.app_metadata?.kyc_status as KYCStatus,
+            registration_paid: session.user.app_metadata?.registration_paid ?? false,
             name: session.user.user_metadata?.name,
           });
         } else {

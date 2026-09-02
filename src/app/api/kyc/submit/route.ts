@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/auth/withAuth';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabaseAdmin, updateAppMetadata } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { sendKYCSubmittedAdminEmail } from '@/lib/email/templates';
 import { AUDIT_ACTIONS } from '@/lib/constants';
@@ -103,10 +103,7 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
       return doc;
     });
 
-    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
-    await supabaseAdmin.auth.admin.updateUserById(userId, {
-      user_metadata: { ...authUserData.user?.user_metadata, kyc_status: 'PENDING' },
-    });
+    await updateAppMetadata(userId, { kyc_status: 'PENDING' });
 
     sendKYCSubmittedAdminEmail({
       userName: user.name ?? user.email,

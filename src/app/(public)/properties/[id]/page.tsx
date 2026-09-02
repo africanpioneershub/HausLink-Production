@@ -46,7 +46,7 @@ export default async function PublicPropertyDetailPage({
 
   const supabase = createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const role = user?.user_metadata?.role as string | undefined;
+  const role = user?.app_metadata?.role as string | undefined;
   const isTenant = role === 'TENANT';
 
   const primaryImage = property.images.find((img) => img.is_primary) ?? property.images[0];

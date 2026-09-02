@@ -22,8 +22,10 @@ vi.mock('@/lib/supabase/publicAuth', () => ({
 
 const createUser = vi.fn();
 const deleteUser = vi.fn();
+const updateAppMetadata = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/lib/supabase/admin', () => ({
   supabaseAdmin: { auth: { admin: { createUser: (...args: unknown[]) => createUser(...args), deleteUser: (...args: unknown[]) => deleteUser(...args) } } },
+  updateAppMetadata: (...args: unknown[]) => updateAppMetadata(...args),
 }));
 
 vi.mock('@/lib/email/templates', () => ({
@@ -144,5 +146,57 @@ describe('POST /api/auth/register', () => {
     expect(loggedError.message).toBe('User already registered');
 
     errorSpy.mockRestore();
+  });
+
+  it('never puts role/status/kyc_status/registration_paid into signUp options.data -- those go through updateAppMetadata instead', async () => {
+    // signUp's options.data can only ever write user_metadata (a field any
+    // authenticated user can later edit themselves via
+    // auth.updateUser({ data: {...} })), so authorization fields must never
+    // be set there -- otherwise they'd start out client-writable from the
+    // very first write.
+    signUp.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('http://localhost/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validPayload),
+      })
+    );
+
+    expect(res.status).toBe(201);
+
+    const [signUpArgs] = signUp.mock.calls[0];
+    expect(signUpArgs.options.data).not.toHaveProperty('role');
+    expect(signUpArgs.options.data).not.toHaveProperty('status');
+    expect(signUpArgs.options.data).not.toHaveProperty('kyc_status');
+    expect(signUpArgs.options.data).not.toHaveProperty('registration_paid');
+
+    expect(updateAppMetadata).toHaveBeenCalledWith('user-1', {
+      role: 'TENANT',
+      status: 'PENDING',
+      kyc_status: 'NOT_SUBMITTED',
+      registration_paid: false,
+    });
+  });
+
+  it('rolls back the auth user and fails the request if setting app_metadata fails', async () => {
+    signUp.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+    updateAppMetadata.mockRejectedValueOnce(new Error('service role call failed'));
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('http://localhost/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validPayload),
+      })
+    );
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.code).toBe('AUTH_METADATA_ERROR');
+    expect(deleteUser).toHaveBeenCalledWith('user-1');
   });
 });

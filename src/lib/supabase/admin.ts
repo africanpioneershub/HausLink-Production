@@ -26,3 +26,20 @@ export const supabaseAdmin = new Proxy({} as SupabaseClient, {
     return Reflect.get(getClient(), prop, receiver);
   },
 });
+
+// Authorization state (role/status/kyc_status/registration_paid) must live in
+// app_metadata, never user_metadata -- app_metadata is only writable via this
+// service-role client, whereas user_metadata is writable by any authenticated
+// user via their own session (auth.updateUser({ data: {...} })). This helper
+// centralizes the read-merge-write so every call site stays consistent: fetch
+// the current app_metadata, merge the patch over it, write it back. Never use
+// updateUserById({ user_metadata }) for these four fields.
+export async function updateAppMetadata(
+  userId: string,
+  patch: Record<string, unknown>
+): Promise<void> {
+  const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+  await supabaseAdmin.auth.admin.updateUserById(userId, {
+    app_metadata: { ...data.user?.app_metadata, ...patch },
+  });
+}

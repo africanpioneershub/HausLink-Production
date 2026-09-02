@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { updateAppMetadata } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
@@ -23,7 +23,7 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
       );
     }
 
-    const currentStatus = user.user_metadata?.status as string | undefined;
+    const currentStatus = user.app_metadata?.status as string | undefined;
     if (currentStatus !== 'PENDING') {
       // Already active (or some other state withAuth already let through) --
       // nothing to do, and never overwrite a status we didn't set PENDING.
@@ -32,9 +32,7 @@ export const POST = withAuth(['TENANT', 'LANDLORD'])(
 
     try {
       await prisma.user.update({ where: { id: user.id }, data: { status: 'ACTIVE' } });
-      await supabaseAdmin.auth.admin.updateUserById(user.id, {
-        user_metadata: { ...user.user_metadata, status: 'ACTIVE' },
-      });
+      await updateAppMetadata(user.id, { status: 'ACTIVE' });
     } catch (error) {
       console.error('[activate] Failed to activate user after email confirmation', {
         userId: user.id,

@@ -2,7 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { UserRole } from '@/types';
 import { isAdminIpAllowed } from '@/lib/admin-guard';
-import { validateCsrfToken } from '@/lib/csrf';
+import { validateCsrfToken, getCookieValue, CSRF_COOKIE_NAME } from '@/lib/csrf';
 import { redis } from '@/lib/redis/client';
 
 const CSRF_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -29,7 +29,11 @@ export function withAuth(allowedRoles: UserRole[]) {
           );
         }
 
-        const role = user.user_metadata?.role as UserRole;
+        // role/status come from app_metadata, never user_metadata --
+        // app_metadata is writable only via the service-role admin client;
+        // user_metadata is writable by the user themselves from their own
+        // session, which previously let a banned user self-unban.
+        const role = user.app_metadata?.role as UserRole;
 
         if (!allowedRoles.includes(role)) {
           return NextResponse.json(
@@ -38,7 +42,7 @@ export function withAuth(allowedRoles: UserRole[]) {
           );
         }
 
-        const status = user.user_metadata?.status as string;
+        const status = user.app_metadata?.status as string;
         if (status === 'BANNED' || status === 'SUSPENDED') {
           return NextResponse.json(
             { success: false, error: 'Account suspended', code: 'BANNED' },
@@ -47,14 +51,24 @@ export function withAuth(allowedRoles: UserRole[]) {
         }
 
         if (role === 'ADMIN') {
-          // The 2FA verify route is exempt: it IS the endpoint that establishes
-          // the admin session, so gating it behind an IP check creates a
-          // chicken-and-egg lockout. It is already protected by Supabase auth +
-          // TOTP code + rate limiting. All other admin routes keep the IP gate.
+          // The 2FA verify route, and the routes that bootstrap 2FA itself
+          // (checking enrollment status, enrolling a new TOTP secret,
+          // confirming enrollment), are exempt: these ARE the ceremony that
+          // establishes the admin session, so gating them behind an IP
+          // check or an already-verified 2FA session creates a
+          // chicken-and-egg lockout. They're already protected by Supabase
+          // auth + TOTP code + rate limiting. All other admin routes keep
+          // the IP gate.
           const url = new URL(request.url);
-          const is2faVerifyRoute = url.pathname === '/api/admin/2fa/verify';
+          const TWO_FA_BOOTSTRAP_ROUTES = new Set([
+            '/api/admin/2fa/verify',
+            '/api/admin/2fa/status',
+            '/api/admin/2fa/enroll/start',
+            '/api/admin/2fa/enroll/confirm',
+          ]);
+          const is2faBootstrapRoute = TWO_FA_BOOTSTRAP_ROUTES.has(url.pathname);
 
-          if (!is2faVerifyRoute) {
+          if (!is2faBootstrapRoute) {
             const ip = (request as Request & { headers: Headers }).headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
             if (!isAdminIpAllowed(ip)) {
               return NextResponse.json(
@@ -81,8 +95,9 @@ export function withAuth(allowedRoles: UserRole[]) {
         }
 
         if (CSRF_METHODS.has(request.method?.toUpperCase() ?? '')) {
-          const csrfToken = request.headers.get('x-csrf-token');
-          if (!csrfToken || !validateCsrfToken(csrfToken)) {
+          const headerToken = request.headers.get('x-csrf-token');
+          const cookieToken = getCookieValue(request, CSRF_COOKIE_NAME);
+          if (!validateCsrfToken(cookieToken, headerToken, user.id)) {
             return NextResponse.json(
               { success: false, error: 'Invalid or missing CSRF token', code: 'CSRF_INVALID' },
               { status: 403 }

@@ -17,7 +17,7 @@ export const GET = withAuth(['TENANT', 'LANDLORD', 'ADMIN'])(
       );
     }
 
-    const role = user.user_metadata?.role as string;
+    const role = user.app_metadata?.role as string;
     const isParticipant = payment.tenant_id === user.id || payment.landlord_id === user.id;
     if (role !== 'ADMIN' && !isParticipant) {
       return NextResponse.json(

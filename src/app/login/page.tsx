@@ -50,7 +50,7 @@ export default function LoginPage() {
       return;
     }
 
-    const role = data.user?.user_metadata?.role as UserRole | undefined;
+    const role = data.user?.app_metadata?.role as UserRole | undefined;
     const destination = role ? ROLE_REDIRECTS[role] : '/';
     router.push(destination);
   }

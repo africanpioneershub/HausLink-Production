@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { withAuth } from '@/lib/auth/withAuth';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabaseAdmin, updateAppMetadata } from '@/lib/supabase/admin';
 import { prisma } from '@/lib/prisma/client';
 import { logAudit } from '@/lib/audit/logger';
 import { deleteCache, CACHE_KEYS } from '@/lib/redis/cache';
@@ -86,10 +86,7 @@ export const PATCH = withAuth(['ADMIN'])(
 
     const updated = await prisma.user.update({ where: { id: userId }, data: { status } });
 
-    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
-    await supabaseAdmin.auth.admin.updateUserById(userId, {
-      user_metadata: { ...authUserData.user?.user_metadata, status },
-    });
+    await updateAppMetadata(userId, { status });
 
     await deleteCache(CACHE_KEYS.userProfile(userId));
 

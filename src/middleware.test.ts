@@ -27,7 +27,7 @@ describe('middleware -- account activation gate', () => {
   it('lets a TENANT straight into /tenant/dashboard with no PENDING redirect -- the removed gate', async () => {
     getUser.mockResolvedValue({
       data: {
-        user: { id: 'u1', user_metadata: { role: 'TENANT', status: 'PENDING' } },
+        user: { id: 'u1', app_metadata: { role: 'TENANT', status: 'PENDING' } },
       },
     });
 
@@ -46,7 +46,7 @@ describe('middleware -- account activation gate', () => {
       data: {
         user: {
           id: 'u2',
-          user_metadata: { role: 'LANDLORD', status: 'ACTIVE', kyc_status: 'APPROVED', registration_paid: true },
+          app_metadata: { role: 'LANDLORD', status: 'ACTIVE', kyc_status: 'APPROVED', registration_paid: true },
         },
       },
     });
@@ -68,7 +68,7 @@ describe('middleware -- account activation gate', () => {
 
   it('still redirects a BANNED user to /unauthorized -- unrelated check untouched', async () => {
     getUser.mockResolvedValue({
-      data: { user: { id: 'u3', user_metadata: { role: 'TENANT', status: 'BANNED' } } },
+      data: { user: { id: 'u3', app_metadata: { role: 'TENANT', status: 'BANNED' } } },
     });
 
     const { middleware } = await import('./middleware');
@@ -79,7 +79,7 @@ describe('middleware -- account activation gate', () => {
 
   it('still redirects a wrong-role user to /unauthorized -- unrelated check untouched', async () => {
     getUser.mockResolvedValue({
-      data: { user: { id: 'u4', user_metadata: { role: 'LANDLORD', status: 'ACTIVE' } } },
+      data: { user: { id: 'u4', app_metadata: { role: 'LANDLORD', status: 'ACTIVE' } } },
     });
 
     const { middleware } = await import('./middleware');
@@ -93,7 +93,47 @@ describe('middleware -- account activation gate', () => {
       data: {
         user: {
           id: 'u5',
-          user_metadata: { role: 'LANDLORD', status: 'ACTIVE', kyc_status: 'APPROVED', registration_paid: false },
+          app_metadata: { role: 'LANDLORD', status: 'ACTIVE', kyc_status: 'APPROVED', registration_paid: false },
+        },
+      },
+    });
+
+    const { middleware } = await import('./middleware');
+    const res = await middleware(makeRequest('/landlord/properties'));
+
+    expect(res.headers.get('location')).toContain('/onboarding/payment-required');
+  });
+
+  it('denies a banned user even when their self-writable user_metadata claims ACTIVE -- app_metadata is the only trusted source', async () => {
+    // Reproduces the exact self-unban vector: a banned user can call
+    // supabase.auth.updateUser({ data: { status: 'ACTIVE' } }) from their
+    // own browser session, which writes only to user_metadata (the field
+    // any authenticated user can edit themselves). Real ban status lives in
+    // app_metadata (server/admin-writable only, via updateAppMetadata) and
+    // must be the only field middleware ever consults.
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'u6',
+          app_metadata: { role: 'TENANT', status: 'BANNED' },
+          user_metadata: { role: 'TENANT', status: 'ACTIVE' },
+        },
+      },
+    });
+
+    const { middleware } = await import('./middleware');
+    const res = await middleware(makeRequest('/tenant/dashboard'));
+
+    expect(res.headers.get('location')).toContain('/unauthorized');
+  });
+
+  it('also denies a landlord who forges registration_paid via user_metadata to bypass the payment gate', async () => {
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'u7',
+          app_metadata: { role: 'LANDLORD', status: 'ACTIVE', kyc_status: 'APPROVED', registration_paid: false },
+          user_metadata: { role: 'LANDLORD', status: 'ACTIVE', kyc_status: 'APPROVED', registration_paid: true },
         },
       },
     });

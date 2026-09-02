@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabaseAdmin, updateAppMetadata } from '@/lib/supabase/admin';
 import { supabasePublicAuth } from '@/lib/supabase/publicAuth';
 import { serializeAuthError, withAuthRetry } from '@/lib/supabase/authError';
 import { prisma } from '@/lib/prisma/client';
@@ -86,6 +86,13 @@ async function handleRegister(request: Request) {
     // state. signUp() is what actually triggers Supabase Auth's confirmation
     // email (relayed through Resend at the project's SMTP layer) with a link
     // back to emailRedirectTo.
+    //
+    // options.data below can ONLY ever write to user_metadata — GoTrue's
+    // public signUp endpoint has no way to set app_metadata, which is meant
+    // to be server/admin-writable only. So only non-authorization profile
+    // fields (name/phone/whatsapp/city/district) go here;
+    // role/status/kyc_status/registration_paid are set immediately after via
+    // a privileged admin call, below.
     const result = await withAuthRetry(() =>
       supabasePublicAuth.auth.signUp({
         email,
@@ -94,10 +101,6 @@ async function handleRegister(request: Request) {
           emailRedirectTo: 'https://hauselink.com/auth/confirm',
           data: {
             name,
-            role,
-            status: 'PENDING',
-            kyc_status: 'NOT_SUBMITTED',
-            registration_paid: false,
             phone: fullPhone,
             whatsapp: fullWhatsapp,
             city,
@@ -127,6 +130,33 @@ async function handleRegister(request: Request) {
     return NextResponse.json(
       { success: false, error: 'Failed to reach the authentication service. Please try again.', code: 'AUTH_UNREACHABLE' },
       { status: 502 }
+    );
+  }
+
+  try {
+    await updateAppMetadata(userId, {
+      role,
+      status: 'PENDING',
+      kyc_status: 'NOT_SUBMITTED',
+      registration_paid: false,
+    });
+  } catch (metadataError) {
+    console.error('[register] Failed to set app_metadata, rolling back auth user', {
+      email,
+      userId,
+      error: metadataError,
+    });
+    try {
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+    } catch (rollbackError) {
+      console.error('[register] Failed to roll back auth user after app_metadata error', {
+        userId,
+        error: rollbackError,
+      });
+    }
+    return NextResponse.json(
+      { success: false, error: 'Account creation failed. Please try again.', code: 'AUTH_METADATA_ERROR' },
+      { status: 500 }
     );
   }
 

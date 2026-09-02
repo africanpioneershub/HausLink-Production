@@ -7,6 +7,13 @@ import { Redis } from '@upstash/redis';
 // account (see docs/INCIDENT_LOG.md). Supabase's own "email must be
 // confirmed to sign in" check is the real access gate; a confirmed-email
 // user reaching this middleware already cleared it.
+//
+// All authorization fields below are read from app_metadata, never
+// user_metadata. app_metadata is writable only via the service-role admin
+// client (see lib/supabase/admin.ts's updateAppMetadata); user_metadata is
+// writable by any authenticated user from their own session
+// (auth.updateUser({ data: {...} })), which previously let a banned user
+// self-unban and a landlord bypass the registration-fee gate.
 const PROTECTED_ROUTES: Record<string, { requiredRole: string; extraGates: string[] }> = {
   '/tenant': { requiredRole: 'TENANT', extraGates: [] },
   '/landlord': { requiredRole: 'LANDLORD', extraGates: ['REGISTRATION_PAID'] },
@@ -103,25 +110,29 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
-  const role = user.user_metadata?.role as string;
+  const role = user.app_metadata?.role as string;
   if (role !== config.requiredRole) {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
-  const status = user.user_metadata?.status as string;
+  const status = user.app_metadata?.status as string;
   if (status === 'BANNED' || status === 'SUSPENDED') {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
   if (config.extraGates.includes('REGISTRATION_PAID')) {
-    const kycStatus = user.user_metadata?.kyc_status as string;
-    const regPaid = user.user_metadata?.registration_paid as boolean;
+    const kycStatus = user.app_metadata?.kyc_status as string;
+    const regPaid = user.app_metadata?.registration_paid as boolean;
     if (kycStatus === 'APPROVED' && !regPaid && pathname !== '/onboarding/payment-required') {
       return NextResponse.redirect(new URL('/onboarding/payment-required', request.url));
     }
   }
 
-  if (config.extraGates.includes('TWO_FA_VERIFIED') && pathname !== '/admin/2fa-challenge') {
+  if (
+    config.extraGates.includes('TWO_FA_VERIFIED') &&
+    pathname !== '/admin/2fa-challenge' &&
+    pathname !== '/admin/2fa-enroll'
+  ) {
     const redisClient = getRedis();
     const twoFaVerified = redisClient ? await redisClient.get(`admin:2fa:${user.id}`) : null;
     if (!twoFaVerified) {

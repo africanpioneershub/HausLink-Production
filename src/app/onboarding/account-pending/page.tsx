@@ -18,10 +18,10 @@ export default function AccountPendingPage() {
     try {
       const supabase = createBrowserSupabaseClient();
       const { data } = await supabase.auth.getUser();
-      const status = data.user?.user_metadata?.status as string | undefined;
+      const status = data.user?.app_metadata?.status as string | undefined;
       if (status === 'ACTIVE') {
         setApproved(true);
-        const role = data.user?.user_metadata?.role as string | undefined;
+        const role = data.user?.app_metadata?.role as string | undefined;
         setTimeout(() => {
           router.push(role === 'LANDLORD' ? '/landlord/dashboard' : '/tenant/dashboard');
         }, 1500);
