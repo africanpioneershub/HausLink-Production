@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCsrf, csrfHeaders } from '@/hooks/useCsrf';
@@ -11,6 +11,24 @@ export default function AdminTwoFaChallengePage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(true);
+
+  useEffect(() => {
+    // Every admin who existed before per-admin TOTP replaced the old
+    // shared ADMIN_OTP_SECRET (and any brand-new admin) starts with no
+    // enrolled secret -- route them to enrollment instead of a challenge
+    // that has nothing valid to check a code against.
+    fetch('/api/admin/2fa/status')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && !json.data.enrolled) {
+          router.replace('/admin/2fa-enroll');
+          return;
+        }
+        setCheckingEnrollment(false);
+      })
+      .catch(() => setCheckingEnrollment(false));
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +54,14 @@ export default function AdminTwoFaChallengePage() {
       setError('Something went wrong. Please try again.');
       setVerifying(false);
     }
+  }
+
+  if (checkingEnrollment) {
+    return (
+      <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12">
+        <p className="text-sm text-gray-500">Loading…</p>
+      </main>
+    );
   }
 
   return (

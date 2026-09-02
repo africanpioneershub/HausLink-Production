@@ -20,6 +20,17 @@ model User {
   avatar_url        String?
   city              String?
   district          String?
+  // Per-admin TOTP secret (AES-256-GCM encrypted at rest, see
+  // lib/auth/totpSecret.ts), replacing the previous single shared
+  // ADMIN_OTP_SECRET env var every admin verified against. totp_secret_encrypted
+  // is set as soon as an admin starts enrollment (or re-enrolls); it only
+  // becomes the ACTIVE secret used to gate /admin/* once totp_enrolled_at is
+  // set, which happens only after the admin proves possession with a real
+  // code in POST /api/admin/2fa/enroll/confirm. Both null means "not
+  // enrolled yet" -- withAuth's 2FA check routes such an admin to enrollment
+  // instead of the normal challenge.
+  totp_secret_encrypted String?
+  totp_enrolled_at      DateTime?
   created_at        DateTime  @default(now())
   updated_at        DateTime  @updatedAt
 

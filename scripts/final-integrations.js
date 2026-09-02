@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
   const WA_TOKEN       = process.env.WHATSAPP_TOKEN;
   const APP_URL        = process.env.NEXT_PUBLIC_APP_URL;
   const CRON_SECRET    = process.env.CRON_SECRET;
-  const ADMIN_OTP      = process.env.ADMIN_OTP_SECRET;
+  const TOTP_KEY       = process.env.TOTP_ENCRYPTION_KEY;
   const AIRTEL_HOOK    = process.env.AIRTEL_WEBHOOK_SECRET;
 
   // 1. Supabase Auth API
@@ -106,8 +106,9 @@ const prisma = new PrismaClient();
   // 11. CRON_SECRET
   console.log(`CRON_SECRET:             ${CRON_SECRET ? '✅ set' : '❌ missing'}`);
 
-  // 12. ADMIN_OTP_SECRET (2FA)
-  console.log(`ADMIN_OTP_SECRET:        ${ADMIN_OTP ? '✅ set' : '❌ missing — admin 2FA won\'t work'}`);
+  // 12. TOTP_ENCRYPTION_KEY (per-admin 2FA secret encryption)
+  const totpKeyValid = !!TOTP_KEY && Buffer.from(TOTP_KEY, 'base64').length === 32;
+  console.log(`TOTP_ENCRYPTION_KEY:     ${totpKeyValid ? '✅ set (32 bytes)' : TOTP_KEY ? '❌ set but not a valid 32-byte base64 key' : '❌ missing — admin 2FA enrollment/verification won\'t work'}`);
 
   // 13. Key lengths (sanity)
   console.log('\n--- Key Sanity ---');

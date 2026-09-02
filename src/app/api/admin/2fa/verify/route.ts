@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
-import { isAdminOtpConfigured, verifyAdminOtp } from '@/lib/auth/totp';
+import { verifyAdminOtp } from '@/lib/auth/totp';
+import { decryptTotpSecret } from '@/lib/auth/totpSecret';
+import { prisma } from '@/lib/prisma/client';
 import { setSession, getSession } from '@/lib/redis/session';
 import { redis } from '@/lib/redis/client';
 import { authRateLimit, applyRateLimit } from '@/lib/redis/ratelimit';
@@ -17,18 +19,33 @@ export const POST = withAuth(['ADMIN'])(
       );
     }
 
-    if (!isAdminOtpConfigured()) {
-      console.error('[admin/2fa/verify] ADMIN_OTP_SECRET is not configured');
+    const user = await prisma.user.findUnique({
+      where: { id: admin.id },
+      select: { totp_secret_encrypted: true, totp_enrolled_at: true },
+    });
+
+    if (!user?.totp_enrolled_at || !user.totp_secret_encrypted) {
       return NextResponse.json(
-        { success: false, error: 'Two-factor authentication is not configured', code: 'NOT_CONFIGURED' },
-        { status: 503 }
+        { success: false, error: 'Two-factor authentication is not set up for this account yet', code: 'ENROLLMENT_REQUIRED' },
+        { status: 409 }
       );
     }
 
     const body = await request.json().catch(() => null);
     const code = typeof body?.code === 'string' ? body.code.trim() : '';
 
-    if (!verifyAdminOtp(code)) {
+    let secret: string;
+    try {
+      secret = decryptTotpSecret(user.totp_secret_encrypted);
+    } catch (error) {
+      console.error('[admin/2fa/verify] Failed to decrypt stored TOTP secret', { adminId: admin.id, error });
+      return NextResponse.json(
+        { success: false, error: 'Two-factor authentication is misconfigured for this account', code: 'NOT_CONFIGURED' },
+        { status: 503 }
+      );
+    }
+
+    if (!verifyAdminOtp(code, secret)) {
       return NextResponse.json(
         { success: false, error: 'Invalid verification code', code: 'INVALID_CODE' },
         { status: 400 }

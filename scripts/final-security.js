@@ -140,8 +140,9 @@ const fs = require('fs');
   // 9. Admin 2FA gate awareness
   console.log('\n--- Admin 2FA Gate ---');
   console.log('  Middleware enforces TWO_FA_VERIFIED for all /admin/* routes');
-  console.log('  Admin user metadata must have two_fa_verified: true to bypass challenge');
-  console.log(`  Current admin (${process.env.ADMIN_EMAIL ?? 'see ADMIN_EMAIL env var'}) passes — check ADMIN_OTP_SECRET is set`);
+  console.log('  Authoritative check is a per-session Redis key (admin:2fa:{id}), not any user/app_metadata field');
+  console.log('  Each admin now has their own TOTP secret (encrypted, enrolled via /admin/2fa-enroll) --');
+  console.log(`  check TOTP_ENCRYPTION_KEY is set (${process.env.ADMIN_EMAIL ?? 'see ADMIN_EMAIL env var'} must enroll before they can pass the challenge)`);
 
   console.log('\n=== SECURITY CHECK COMPLETE ===');
 })();

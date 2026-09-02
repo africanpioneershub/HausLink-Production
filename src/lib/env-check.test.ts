@@ -7,7 +7,7 @@ const ALL_REQUIRED_VARS = {
   UPSTASH_REDIS_REST_TOKEN: 'x',
   CSRF_SECRET: 'x',
   CRON_SECRET: 'x',
-  ADMIN_OTP_SECRET: 'x',
+  TOTP_ENCRYPTION_KEY: 'x',
   RESEND_API_KEY: 'x',
   REDIS_URL: 'redis://x:6379',
 };
