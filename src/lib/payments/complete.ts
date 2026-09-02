@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma/client';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { updateAppMetadata } from '@/lib/supabase/admin';
 import { sendRentPaidEmail } from '@/lib/email/templates';
 import { sendWhatsAppRentPaid } from '@/lib/whatsapp/templates';
 
@@ -59,10 +59,7 @@ export async function completePayment(
     });
 
     try {
-      const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(payment.landlord_id);
-      await supabaseAdmin.auth.admin.updateUserById(payment.landlord_id, {
-        user_metadata: { ...authUserData.user?.user_metadata, registration_paid: true },
-      });
+      await updateAppMetadata(payment.landlord_id, { registration_paid: true });
     } catch (error) {
       console.error('[completePayment] Failed to sync registration_paid to Supabase metadata', error);
     }
@@ -110,8 +107,24 @@ export async function completePayment(
 }
 
 export async function failPayment(paymentId: string): Promise<void> {
-  await prisma.payment.update({
-    where: { id: paymentId },
+  // Conditional: never downgrade a payment that's already COMPLETED or
+  // REFUNDED. Without this, an out-of-order or duplicate webhook delivery
+  // reporting failure after a real success would silently corrupt an
+  // already-ledgered payment back to FAILED while its LedgerEntry (and any
+  // disbursement built on it) stayed untouched -- see docs/INCIDENT_LOG.md.
+  const result = await prisma.payment.updateMany({
+    where: { id: paymentId, status: { notIn: ['COMPLETED', 'REFUNDED'] } },
     data: { status: 'FAILED' },
   });
+
+  if (result.count === 0) {
+    // The guard actually blocked something here -- this means a failure
+    // signal arrived for a payment that's already settled, which points at
+    // an out-of-order/duplicate webhook delivery (or worse, a forged one).
+    // Worth knowing about, not a silent no-op.
+    console.error(
+      '[failPayment] Blocked -- refusing to downgrade a payment that is already COMPLETED or REFUNDED',
+      { paymentId }
+    );
+  }
 }

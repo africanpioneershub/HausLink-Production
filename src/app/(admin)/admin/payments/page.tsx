@@ -35,6 +35,7 @@ const STATUS_BADGE: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-700',
   COMPLETED: 'bg-green-100 text-green-700',
   FAILED: 'bg-red-100 text-red-700',
+  REFUND_REQUESTED: 'bg-orange-100 text-orange-700',
   REFUNDED: 'bg-blue-100 text-blue-700',
   CANCELLED: 'bg-gray-100 text-gray-700',
 };
@@ -72,13 +73,17 @@ export default function AdminPaymentsPage() {
   }, []);
 
   async function handleRefund(id: string) {
-    if (!window.confirm('Refund this payment?')) return;
+    // This does not move any money -- there is no automated MoMo/Airtel
+    // reversal integration yet. It flags the payment so disbursement won't
+    // pay it out, and leaves the actual refund as a manual step through the
+    // provider's own dashboard.
+    if (!window.confirm('Flag this payment for a manual refund? This does not send any money back automatically -- you will need to process the actual refund through MTN/Airtel yourself.')) return;
     setRefundingId(id);
     try {
       const res = await fetch(`/api/admin/payments/${id}/refund`, { method: 'POST', headers: csrfHeaders(csrf) });
       const json = await res.json();
       if (json.success) {
-        setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'REFUNDED' } : p)));
+        setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'REFUND_REQUESTED' } : p)));
       }
     } finally {
       setRefundingId(null);
@@ -171,8 +176,9 @@ export default function AdminPaymentsPage() {
                         onClick={() => handleRefund(p.id)}
                         disabled={refundingId === p.id}
                         className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                        title="Flags this payment for a manual refund -- does not send money automatically"
                       >
-                        Refund
+                        Flag for refund
                       </button>
                     )}
                   </td>

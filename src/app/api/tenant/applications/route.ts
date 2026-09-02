@@ -35,6 +35,18 @@ export const POST = withAuth(['TENANT'])(
       );
     }
 
+    // Server-side re-check, matching the same pattern already used
+    // correctly on the landlord side (api/landlord/properties POST) --
+    // the "Apply" button's visibility is a UI convenience, not a security
+    // boundary, so a direct POST must independently enforce this.
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (dbUser?.kyc_status !== 'APPROVED') {
+      return NextResponse.json(
+        { success: false, error: 'Identity verification required before applying', code: 'KYC_REQUIRED' },
+        { status: 403 }
+      );
+    }
+
     const property = await prisma.property.findUnique({ where: { id: parsed.data.property_id } });
     if (!property || property.status !== 'ACTIVE') {
       return NextResponse.json(
@@ -65,10 +77,8 @@ export const POST = withAuth(['TENANT'])(
       },
     });
 
-    const [landlord, tenant] = await Promise.all([
-      prisma.user.findUnique({ where: { id: property.landlord_id } }),
-      prisma.user.findUnique({ where: { id: user.id } }),
-    ]);
+    const landlord = await prisma.user.findUnique({ where: { id: property.landlord_id } });
+    const tenant = dbUser;
 
     if (landlord) {
       sendNewApplicationEmail({

@@ -21,12 +21,16 @@ vi.mock('@/lib/whatsapp/client', () => ({
   sendWhatsAppMessage: (...args: unknown[]) => sendWhatsAppMessage(...args),
 }));
 
-function makeLedgerEntry(overrides: { kyc_status?: string; disbursement_status?: string } = {}) {
+function makeLedgerEntry(
+  overrides: { kyc_status?: string; disbursement_status?: string; payment_status?: string } = {}
+) {
   return {
     id: 'ledger-1',
+    payment_id: 'payment-1',
     landlord_net_rwf: 95000,
     disbursement_status: overrides.disbursement_status ?? 'PENDING',
     payment: {
+      status: overrides.payment_status ?? 'COMPLETED',
       landlord: {
         id: 'landlord-1',
         phone: '+250788000000',
@@ -36,6 +40,58 @@ function makeLedgerEntry(overrides: { kyc_status?: string; disbursement_status?:
     },
   };
 }
+
+describe('disbursement.worker -- payment-status gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('blocks the payout when the payment has been flagged for refund, logs an ERROR, and marks the ledger entry FAILED', async () => {
+    // Reproduces the exact gap: the admin "flag for refund" action only
+    // touches Payment.status, never the ledger entry -- without this check,
+    // a refunded payment would still disburse in full.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    findUnique.mockResolvedValue(makeLedgerEntry({ payment_status: 'REFUND_REQUESTED' }));
+
+    const { processLedgerEntry } = await import('./disbursement.worker');
+    await processLedgerEntry('ledger-1');
+
+    expect(disburseToLandlord).not.toHaveBeenCalled();
+    expect(ledgerUpdate).toHaveBeenCalledWith({
+      where: { id: 'ledger-1' },
+      data: { disbursement_status: 'FAILED' },
+    });
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[disbursement.worker]'),
+      expect.objectContaining({ paymentId: 'payment-1', paymentStatus: 'REFUND_REQUESTED' })
+    );
+
+    errorSpy.mockRestore();
+  });
+
+  it('blocks the payout for a FAILED payment the same way', async () => {
+    findUnique.mockResolvedValue(makeLedgerEntry({ payment_status: 'FAILED' }));
+
+    const { processLedgerEntry } = await import('./disbursement.worker');
+    await processLedgerEntry('ledger-1');
+
+    expect(disburseToLandlord).not.toHaveBeenCalled();
+    expect(ledgerUpdate).toHaveBeenCalledWith({
+      where: { id: 'ledger-1' },
+      data: { disbursement_status: 'FAILED' },
+    });
+  });
+
+  it('proceeds normally for a COMPLETED payment -- unrelated to the KYC gate below', async () => {
+    findUnique.mockResolvedValue(makeLedgerEntry({ payment_status: 'COMPLETED' }));
+    disburseToLandlord.mockResolvedValue({ transactionId: 'txn-1', status: 'PENDING' });
+
+    const { processLedgerEntry } = await import('./disbursement.worker');
+    await processLedgerEntry('ledger-1');
+
+    expect(disburseToLandlord).toHaveBeenCalled();
+  });
+});
 
 describe('disbursement.worker -- KYC gate', () => {
   beforeEach(() => {

@@ -15,6 +15,25 @@ export async function processLedgerEntry(ledgerEntryId: string) {
 
   if (!ledgerEntry || ledgerEntry.disbursement_status !== 'PENDING') return;
 
+  // A payment flagged for refund (or otherwise moved off COMPLETED --
+  // FAILED, REFUND_REQUESTED, REFUNDED) must never be paid out, even if its
+  // ledger entry is still sitting PENDING. This is the actual money-risk
+  // guard: the admin "flag for refund" action (see
+  // api/admin/payments/[id]/refund) only ever changes Payment.status, not
+  // this ledger entry, so without this check a refunded payment would still
+  // disburse in full.
+  if (ledgerEntry.payment.status !== 'COMPLETED') {
+    console.error(
+      '[disbursement.worker] Blocking disbursement -- payment is not COMPLETED',
+      { paymentId: ledgerEntry.payment_id, paymentStatus: ledgerEntry.payment.status, ledgerEntryId: ledgerEntry.id }
+    );
+    await prisma.ledgerEntry.update({
+      where: { id: ledgerEntry.id },
+      data: { disbursement_status: 'FAILED' },
+    });
+    return;
+  }
+
   const landlord = ledgerEntry.payment.landlord;
 
   // KYC is enforced here, at the point of actual financial risk, rather
